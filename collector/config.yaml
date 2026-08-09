@@ -1,0 +1,17 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317  # 0.0.0.0 allows Kubernetes pods to connect
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  file:
+    path: ./traces.json
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [file]
