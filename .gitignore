@@ -1,2 +1,3 @@
 *.exe
 collector/traces.json
+.idea/
