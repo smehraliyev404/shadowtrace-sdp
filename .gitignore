@@ -1,3 +1,42 @@
 *.exe
 collector/traces.json
 .idea/
+
+# Python Virtual Environments (NEVER push venv!)
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python Cache & Compiled Artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+.coverage
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDEs & Text Editors (VS Code, PyCharm, IntelliJ)
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Large Telemetry Data Dumps (Keep Git repo lightweight)
+data/*.json
+data/*.csv
+!data/.gitkeep
