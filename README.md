@@ -80,11 +80,16 @@ Use PowerShell as Administrator for all commands.
 Install from docker.com and enable the WSL 2 backend when prompted. If WSL isn't installed:
 
 powershell
+
+
+
 wsl --install     # then restart your PC
 
 Launch Docker Desktop. In Settings → Resources, set CPUs: 4+ and Memory: 8 GB+.
 
 powershell
+
+
 docker ps          # should not error
 
 ```
@@ -96,6 +101,8 @@ docker ps          # should not error
 
 
 powershell
+
+
 choco install kubernetes-cli minikube -y
 
 Then close and reopen PowerShell so the commands are found.
@@ -111,6 +118,8 @@ Then close and reopen PowerShell so the commands are found.
 --driver=docker is what makes the Kubernetes node run inside Docker.
 
 powershell
+
+
 minikube start --driver=docker --cpus=4 --memory=8192
 
 ```
@@ -122,6 +131,9 @@ minikube start --driver=docker --cpus=4 --memory=8192
 ```bash
 
 powershell
+
+
+
 minikube status                  # all Running
 kubectl get nodes                # STATUS: Ready
 kubectl config current-context   # minikube
