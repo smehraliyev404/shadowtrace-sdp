@@ -1,4 +1,14 @@
 services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: shadowtrace-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # Jaeger UI & REST API
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: shadowtrace-collector
@@ -6,6 +16,5 @@ services:
     volumes:
       - ./collector/config.yaml:/etc/otelcol-contrib/config.yaml
       - ./collector:/etc/otelcol-contrib/output
-    ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - jaeger
