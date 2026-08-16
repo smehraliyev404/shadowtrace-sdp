@@ -40,3 +40,6 @@ __pycache__/
 data/*.json
 data/*.csv
 !data/.gitkeep
+
+
+data/raw_traces/*.json
