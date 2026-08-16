@@ -35,6 +35,7 @@ __pycache__/
 .idea/
 *.swp
 *.swo
+*.iml
 
 # Large Telemetry Data Dumps (Keep Git repo lightweight)
 data/*.json
