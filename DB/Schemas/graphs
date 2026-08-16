@@ -1,0 +1,20 @@
+{
+  "_id": "ObjectId",
+  "trial_id": "String",
+  "trace_id": "String",
+  "timestamp": "ISODate",
+  "nodes": [
+    { "node_id": "String", "service_name": "String" }
+  ],
+  "edges": [
+    {
+      "from": "String",
+      "to": "String",
+      "latency_ms": "Number",
+      "latency_zscore": "Number",
+      "call_count": "Number"
+    }
+  ],
+  "feature_vector": { "<flexible>": "Number" },
+  "label": "String"
+}

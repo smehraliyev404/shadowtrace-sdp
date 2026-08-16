@@ -1,0 +1,12 @@
+{
+  "_id": "ObjectId",
+  "triggering_window_ids": ["ObjectId"],
+  "alert_class": "lateral_movement | brute_force | probing",
+  "severity": "low | medium | high",
+  "edge_key": "String",
+  "detected_at": "ISODate",
+  "status": "open | confirmed | dismissed",
+  "analyst_label": "String",
+  "reviewed_by": "String",
+  "reviewed_at": "ISODate"
+}

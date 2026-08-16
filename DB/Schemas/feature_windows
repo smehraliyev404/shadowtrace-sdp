@@ -1,0 +1,13 @@
+{
+  "_id": "ObjectId",
+  "trial_id": "String",
+  "edge_key": "String",
+  "window_start": "ISODate",
+  "window_end": "ISODate",
+  "path_entropy": "Number",
+  "entropy_baseline": "Number",
+  "causal_history_distance": "Number",
+  "temporal_jitter_z": "Number",
+  "call_repetition": "Number",
+  "repetition_baseline": "Number"
+}

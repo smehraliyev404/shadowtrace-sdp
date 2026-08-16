@@ -1,0 +1,15 @@
+{
+  "_id": "ObjectId",
+  "alert_id": "ObjectId",
+  "istio_policy_type": "rate_limit | deny_edge",
+  "mode": "dry_run | awaiting_approval | enforced",
+  "applied_at": "ISODate",
+  "ttl_seconds": "Number",
+  "verification_result": {
+    "entropy_after": "Number",
+    "repetition_after": "Number",
+    "anomaly_subsided": "Boolean"
+  },
+  "rolled_back": "Boolean",
+  "approved_by": "String"
+}

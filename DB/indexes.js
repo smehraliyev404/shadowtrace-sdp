@@ -1,0 +1,5 @@
+db.feature_windows.createIndex({ trial_id: 1, window_start: 1 })
+db.feature_windows.createIndex({ window_end: 1 }, { expireAfterSeconds: 604800 })
+db.alerts.createIndex({ status: 1, severity: 1, detected_at: -1 })
+db.graphs.createIndex({ trace_id: 1 })
+db.redaction_policies.createIndex({ service_name: 1, version: -1 })

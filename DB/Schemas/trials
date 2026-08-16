@@ -1,0 +1,10 @@
+{
+  "_id": "ObjectId",
+  "trial_id": "String",
+  "attack_type": "normal | http_flood | brute_force | sqli | ssrf | exfiltration",
+  "platform": "String",
+  "feature_condition": "String",
+  "started_at": "ISODate",
+  "ended_at": "ISODate",
+  "split_assignment": "train | test"
+}

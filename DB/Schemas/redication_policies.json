@@ -1,0 +1,16 @@
+{
+  "_id": "ObjectId",
+  "service_name": "String",
+  "version": "Number",
+  "rules": [
+    { "attribute_key": "String", "action": "drop | hash | keep" }
+  ],
+  "features_enabled": ["String"],
+  "sensitivity_score": "Number",
+  "signals": { "E": "Number", "C": "Number", "R": "Number" },
+  "tier": "maximal | coarse | minimal",
+  "hmac_key_ref": "String",
+  "author": "String",
+  "committed_at": "ISODate",
+  "is_active": "Boolean"
+}

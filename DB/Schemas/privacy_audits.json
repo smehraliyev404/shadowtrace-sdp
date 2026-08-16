@@ -1,0 +1,9 @@
+{
+  "_id": "ObjectId",
+  "feature_condition": "String",
+  "run_at": "ISODate",
+  "redaction_aggressiveness": "Number",
+  "detection_macro_f1": "Number",
+  "tier_coverage_pct": "Number",
+  "redaction_coverage_pct": "Number"
+}

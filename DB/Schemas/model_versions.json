@@ -1,0 +1,8 @@
+{
+  "_id": "ObjectId",
+  "version": "Number",
+  "trained_at": "ISODate",
+  "positive_examples": "Number",
+  "negative_examples": "Number",
+  "macro_f1": "Number"
+}
