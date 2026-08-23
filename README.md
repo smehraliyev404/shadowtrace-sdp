@@ -1,214 +1,253 @@
-# ShadowTrace: SDP and Research Paper
+# 🛡️ ShadowTrace: Privacy-Preserving Security Anomaly Detection
+### *Resolving the Privacy-Security Paradox in Microservice Telemetry via Metadata-Blind ST-GNNs*
 
-### Set Up Python Virtual Environment
+ShadowTrace is an observability-driven security research framework designed to detect application-layer cyberattacks—specifically **lateral movement**—in cloud-native microservice architectures.
 
-```bash
-# Create a Python virtual environment
-python3 -m venv venv
+Standard observability pipelines (OpenTelemetry) create a **Privacy-Security Paradox**: auto-instrumentation exposes sensitive metadata (internal pod IPs, RPC schemas, tokens) in plain text, creating GDPR/CCPA compliance risks and an internal reconnaissance attack surface. ShadowTrace decouples threat detection from data exposure using **Spatio-Temporal Graph Neural Networks (ST-GNNs)**, achieving high threat detection fidelity on **100% redacted, metadata-blind telemetry streams**.
 
-# Activate virtual environment (macOS/Linux)
-source venv/bin/activate
+---
 
-# On Windows (Command Prompt):
-# venv\Scripts\activate
+## 📂 Repository Structure
+
+```text
+shadowtrace-sdp/
+├── DB/                           # Database design & MongoDB collection schemas
+│   ├── Schemas/                  # Collection JSON schemas (alerts, privacy_audits, etc.)
+│   └── indexes.js                # Database indexes and TTL configuration
+├── User_Design/                  # Appendix B deliverables
+│   ├── erd-schema.png            # Entity-Relationship diagram for MongoDB
+│   ├── uc1-developer-redaction.png # Figma Journey: Dev configures redaction
+│   ├── uc2-admin-alert.png       # Figma Journey: Admin views lateral movement alert
+│   ├── uc3-system-enforcement.png # Figma Journey: System auto-enforces Istio policy
+│   ├── uc4-auditor-audit.png     # Figma Journey: Auditor reviews privacy score
+│   └── user-design.md            # User Design Document narrative
+├── analytics/                    # Python analytics, DAG parser, & ST-GNN models
+│   ├── parse_traces.py           # Extracts DAGs and time-weighted latency edges (w_ij)
+│   ├── privacy_entropy_audit.py  # Calculates Shannon Entropy H(X) & plots chart
+│   └── st_gnn_model.py           # PyTorch Geometric ST-GNN architecture
+├── collector/                    # OpenTelemetry Collector configuration
+│   ├── Dockerfile                # Custom OTel Collector container build
+│   └── config.yaml               # OTel pipeline receiver, exporter, and processor config
+├── data/                         # Trace datasets
+│   └── raw_traces/               # Harvested JSON trace dumps (trace_*.json)
+├── docs/                         # Research artifacts & figures
+│   └── diagrams/
+│       └── privacy_leakage_chart.png # Generated empirical baseline privacy chart
+├── k6_test/                      # Traffic generation & attack simulation
+│   └── normal_traffic.js         # Synthetic user shopping workload with dynamic metadata
+├── scripts/                      # Data collection & automation scripts
+│   └── harvest_traces.py         # Automated harvester querying Jaeger REST API
+├── docker-compose.yml            # Observability stack (Jaeger + OTel Collector)
+├── .gitignore                    # Git exclusion rules (venv, .DS_Store, raw JSONs, .iml)
+├── README.md                     # Project documentation & execution guide
+└── requirements.txt              # Python dependencies
 ```
 
-### Install Dependencies
+---
+
+## ⚡ Quick Start: Python Environment Setup
 
 ```bash
+# 1. Create Python virtual environment
+python3 -m venv venv
+
+# 2. Activate virtual environment
+# On macOS / Linux:
+source venv/bin/activate
+# On Windows (PowerShell as Admin):
+# .\venv\Scripts\Activate.ps1
+
+# 3. Install required Python packages
 pip install -r requirements.txt
 ```
 
-### MacOS setup
+---
 
+## 💻 Machine Setup (macOS & Windows)
 
-1. Docker Desktop
+### 🍎 macOS Setup
 
+1. **Install Docker Desktop:**
+   * Download from [docker.com](https://www.docker.com/products/docker-desktop/) and launch it.
+   * In **Settings → Resources**, set **CPUs: 4+** and **Memory: 8 GB+**.
+   * Verify in terminal: `docker ps`
+
+2. **Install CLI Tools via Homebrew:**
+   ```bash
+   brew install kubectl minikube k6
+   ```
+
+3. **Start Minikube Cluster:**
+   ```bash
+   minikube start --driver=docker --cpus=4 --memory=8192
+   ```
+
+4. **Verify Cluster Health:**
+   ```bash
+   minikube status
+   kubectl get nodes
+   ```
+
+---
+
+### 🪟 Windows Setup (PowerShell as Administrator)
+
+1. **Install Docker Desktop with WSL 2:**
+   * If WSL 2 is not installed: `wsl --install` (then restart PC).
+   * Install Docker Desktop and enable the WSL 2 backend.
+   * In **Settings → Resources**, set **CPUs: 4+** and **Memory: 8 GB+**.
+   * Verify: `docker ps`
+
+2. **Install CLI Tools via Chocolatey:**
+   ```powershell
+   choco install kubernetes-cli minikube k6 -y
+   ```
+   *(Close and reopen PowerShell after installation).*
+
+3. **Start Minikube Cluster:**
+   ```powershell
+   minikube start --driver=docker --cpus=4 --memory=8192
+   ```
+
+4. **Verify Cluster Health:**
+   ```powershell
+   minikube status
+   kubectl get nodes
+   ```
+
+---
+
+## 🚀 Lab Deployment: Google Online Boutique
+
+### 1. Deploy the 11 Microservices
 ```bash
-
-Install from docker.com and launch it.
-
-In Settings → Resources, set CPUs: 4+ and Memory: 8 GB+. Minikube can only use what Docker has, and 11 services need room.
-
-bash
-docker ps          # should not error
-
+kubectl apply -f https://raw.githubusercontent.com/GoogleCloudPlatform/microservices-demo/main/release/kubernetes-manifests.yaml
 ```
 
-
-
-2. Install the tools
-
+### 2. Wait for Pods to Reach `Running`
 ```bash
-
-bash
-brew install kubectl minikube
-
-```
-
-3. Start the cluster
-
-```bash
-
---driver=docker is what makes the Kubernetes node run inside Docker.
-
-bash
-minikube start --driver=docker --cpus=4 --memory=8192
-
-```
-
-4. Verify
-
-```bash
-
-bash
-minikube status                  # all Running
-kubectl get nodes                # STATUS: Ready
-kubectl config current-context   # minikube
-
-```
-
-### Windows setup
-
-Use PowerShell as Administrator for all commands.
-
-
-```bash
-
-1. Docker Desktop
-
-Install from docker.com and enable the WSL 2 backend when prompted. If WSL isn't installed:
-
-powershell
-
-
-
-wsl --install     # then restart your PC
-
-Launch Docker Desktop. In Settings → Resources, set CPUs: 4+ and Memory: 8 GB+.
-
-powershell
-
-
-docker ps          # should not error
-
-```
-
-
-2. Install the tools
-
-```bash
-
-
-powershell
-
-
-choco install kubernetes-cli minikube -y
-
-Then close and reopen PowerShell so the commands are found.
-
-```
-
-
-3. Start the cluster
-
-```bash
-
-
---driver=docker is what makes the Kubernetes node run inside Docker.
-
-powershell
-
-
-minikube start --driver=docker --cpus=4 --memory=8192
-
-```
-
-
-4. Verify
-
-
-```bash
-
-powershell
-
-
-
-minikube status                  # all Running
-kubectl get nodes                # STATUS: Ready
-kubectl config current-context   # minikube
-Deploy
-
-1. Clone the repo
-
-bash
-git clone --depth 1 --branch v0 https://github.com/GoogleCloudPlatform/microservices-demo.git
-cd microservices-demo
-
-2. Create the pods
-
-Everything is in one manifest file:
-
-bash
-kubectl apply -f ./release/kubernetes-manifests.yaml
-
-3. Wait for them to start
-
-bash
 kubectl get pods -w
+```
+*(Press `Ctrl + C` once all pods show status `Running` and `1/1 READY`).*
 
-Wait until all 12 pods show Running and READY 1/1 — takes 2–5 minutes on first run while images download. Ctrl+C to stop watching.
+---
 
+### 3. Essential Cluster Patches
 
-
-adservice-...               1/1   Running
-cartservice-...             1/1   Running
-checkoutservice-...         1/1   Running
-currencyservice-...         1/1   Running
-emailservice-...            1/1   Running
-frontend-...                1/1   Running
-loadgenerator-...           1/1   Running
-paymentservice-...          1/1   Running
-productcatalogservice-...   1/1   Running
-recommendationservice-...   1/1   Running
-redis-cart-...              1/1   Running
-shippingservice-...         1/1   Running
-
-
+#### A. Fix `cartservice` Out-Of-Memory Crashes (OOMKilled fix)
+Google Online Boutique sets a low 128MB limit on `cartservice`. Increase it to 512MB:
+```bash
+kubectl set resources deployment cartservice --limits=memory=512Mi --requests=memory=128Mi
 ```
 
+#### B. Disable Google's Built-in Load Generator
+Disable Google's default background bot so **only our controlled `k6` scripts generate telemetry**:
+```bash
+kubectl scale deployment loadgenerator --replicas=0
+```
 
-4. Open the shop
+#### C. Route Tracing from Minikube Pods to Host Jaeger (Port 4317)
+Configure all microservice deployments to send OpenTelemetry traces to your local Jaeger instance:
+```bash
+kubectl set env deployment/frontend COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/checkoutservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/paymentservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/cartservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/productcatalogservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/currencyservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/shippingservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/emailservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/recommendationservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/adservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+```
+
+---
+
+## 🔄 End-to-End Pipeline Execution (Run the Experiment)
+
+Follow these 5 steps to generate traffic, harvest trace DAGs, and execute the Shannon Entropy Privacy Audit:
+
+### Step 1: Start Observability Stack (Jaeger + OTel Collector)
+```bash
+docker compose up -d
+```
+* **Verify:** Open [http://localhost:16686](http://localhost:16686) in your browser to verify the Jaeger UI loads.
+
+---
+
+### Step 2: Port-Forward the Frontend Service
+```bash
+# Kill any broken background tunnels and start fresh port-forwarding
+pkill -f "port-forward"
+kubectl port-forward svc/frontend 8080:80 &
+```
+* **Verify:** Open [http://localhost:8080](http://localhost:8080) to confirm the Online Boutique store renders in your browser.
+
+---
+
+### Step 3: Generate User Traffic (k6)
+
+#### Option A: Running with locally installed k6 (macOS / Windows)
+```bash
+k6 run -e BASE_URL=http://localhost:8080 k6_test/normal_traffic.js
+```
+
+#### Option B: Running k6 via Docker (No installation required)
+```bash
+docker run --rm -i -e BASE_URL=http://host.docker.internal:8080 grafana/k6 run - < k6_test/normal_traffic.js
+```
+*(Let k6 run for its 2-minute duration. You will see `homepage → 200`, `product → 200`, `checkout → 200`)*.
+
+---
+
+### Step 4: Harvest Trace DAGs to Disk
+```bash
+python3 scripts/harvest_traces.py --target 500
+```
+* **Verify:** Check that 500 trace JSON files were saved in `data/raw_traces/`:
+  ```bash
+  ls data/raw_traces
+  ```
+
+---
+
+### Step 5: Parse Trace DAGs & Run Shannon Entropy Privacy Audit
+```bash
+# 1. Parse trace DAGs and compute time-weighted latency edges (w_ij)
+python3 analytics/parse_traces.py
+
+# 2. Run Shannon Entropy (H) audit and generate leakage chart
+python3 analytics/privacy_entropy_audit.py
+```
+
+* **Output Artifacts (Reference Baseline Run, N=500 traces):**
+  * Terminal prints summary metrics: ~4,056 spans, ~2,940 DAG edges, ~10,157 flagged sensitive attributes.
+  * Generates high-resolution chart saved directly to: `docs/diagrams/privacy_leakage_chart.png`.
+
+---
+
+## 🧹 Clean Up & Cluster Teardown
 
 ```bash
+# Clear harvested local JSON traces
+rm -rf data/raw_traces/*.json
 
+# Stop observability containers
+docker compose down
 
-bash
-minikube service frontend-external
+# Delete Online Boutique application from Minikube
+kubectl delete -f https://raw.githubusercontent.com/GoogleCloudPlatform/microservices-demo/main/release/kubernetes-manifests.yaml
 
-This opens your browser automatically.
-
-kubectl get svc will show frontend-external with EXTERNAL-IP stuck on <pending>. That's normal — Minikube has no cloud load balancer, so use minikube service instead.
-
-Useful commands
-Command	What it does
-kubectl get pods	List pods and status
-kubectl logs <pod>	View a pod's logs
-kubectl logs -f <pod>	Follow logs live
-kubectl describe pod <pod>	Why a pod won't start
-kubectl exec -it <pod> -- sh	Shell into a pod
-minikube dashboard	Open the Kubernetes web UI
-
-Turn off the built-in load generator (it sends constant fake traffic — disable it before taking any measurements):
-
-bash
-kubectl scale deployment loadgenerator --replicas=0
-Clean up
-bash
-kubectl delete -f ./release/kubernetes-manifests.yaml   # remove the app
-minikube stop                                           # pause the cluster
-minikube delete                                         # wipe it completely
-
-
+# Stop or completely wipe Minikube cluster
+minikube stop
+# minikube delete   # (use this only if you want a complete fresh reset)
 ```
 
+---
+
+## 📑 References & Baselines
+1. **Ma, Y. (May 2026)**, *Can Graph-Based Microservice Performance Detection Be Used for Microservice Intrusion Detection?* (arXiv:2605.24283).
+2. **Chen, J. et al. (2023)**, *Tracegra: A trace-based anomaly detection for microservice using graph deep learning*, Computer Communications.
+3. **Sigelman, B. H. et al. (2010)**, *Dapper, a Large-Scale Distributed Systems Tracing Infrastructure*, Google Technical Report.
+4. **NIST SP 800-204 (2019)**, *Security Strategies for Microservices-based Application Systems*, R. Chandramouli.
+5. **Regulation (EU) 2016/679 (GDPR)**, *General Data Protection Regulation*, Articles 4(1), 5(1)(c), 25, 32.
