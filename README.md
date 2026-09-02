@@ -146,19 +146,19 @@ Disable Google's default background bot so **only our controlled `k6` scripts ge
 kubectl scale deployment loadgenerator --replicas=0
 ```
 
-#### C. Route Tracing from Minikube Pods to Host Jaeger (Port 4317)
-Configure all microservice deployments to send OpenTelemetry traces to your local Jaeger instance:
+#### C. Route Tracing to Host Jaeger & Configure Explicit Service Names (Port 4317)
+Configure all microservice deployments to send OpenTelemetry traces to your local Jaeger instance and set clean, explicit service names:
 ```bash
-kubectl set env deployment/frontend COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
-kubectl set env deployment/checkoutservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
-kubectl set env deployment/paymentservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
-kubectl set env deployment/cartservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
-kubectl set env deployment/productcatalogservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
-kubectl set env deployment/currencyservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
-kubectl set env deployment/shippingservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
-kubectl set env deployment/emailservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
-kubectl set env deployment/recommendationservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
-kubectl set env deployment/adservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317
+kubectl set env deployment/frontend COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=frontend
+kubectl set env deployment/checkoutservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=checkoutservice
+kubectl set env deployment/paymentservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=paymentservice
+kubectl set env deployment/cartservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=cartservice
+kubectl set env deployment/productcatalogservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=productcatalogservice
+kubectl set env deployment/currencyservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=currencyservice
+kubectl set env deployment/shippingservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=shippingservice
+kubectl set env deployment/emailservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=emailservice
+kubectl set env deployment/recommendationservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=recommendationservice
+kubectl set env deployment/adservice COLLECTOR_SERVICE_ADDR=host.minikube.internal:4317 ENABLE_TRACING=1 OTEL_EXPORTER_OTLP_ENDPOINT=http://host.minikube.internal:4317 OTEL_SERVICE_NAME=adservice
 ```
 
 ---

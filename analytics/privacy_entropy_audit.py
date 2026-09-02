@@ -1,5 +1,5 @@
 # ShadowTrace: Privacy leakage and Shannon Entropy audit
-# Quantifying PII and secret leakage in raw OpenTelemetry traces
+# Quantifying PII and secret leakage in raw OpenTelemetry traces (spans and process metadata)
 
 import os
 import glob
@@ -54,6 +54,33 @@ def audit_single_trace(file_path: str, entropy_threshold: float = 3.5) -> list:
         spans = item.get("spans", [])
         processes = item.get("processes", {})
 
+        # Process level audit
+        for process_id, proc in processes.items():
+            service_name = proc.get("serviceName", "unknown_service")
+            proc_tags = proc.get("tags", [])
+            for tag in proc_tags:
+                key = tag.get("key", "")
+                val = tag.get("value", "")
+                val_str = str(val.get("stringValue", val) if isinstance(val, dict) else val)
+
+                entropy = calculate_shannon_entropy(val_str)
+                pii_flags = detect_regex_pii(val_str)
+                is_high_entropy = entropy >= entropy_threshold
+
+                if is_high_entropy or len(pii_flags) > 0:
+                    records.append({
+                        "trace_id": trace_id,
+                        "span_id": "(process-level)",
+                        "service_name": service_name,
+                        "span_name": "(process metadata)",
+                        "attribute_key": key,
+                        "attribute_value_sample": val_str[:30] + "..." if len(val_str) > 30 else val_str,
+                        "entropy": entropy,
+                        "pii_detected": ", ".join(pii_flags) if pii_flags else "None",
+                        "requires_redaction": True
+                    })
+
+        # Span level audit
         for span in spans:
             span_id = span.get("spanID") or span.get("spanId", "")
             span_name = span.get("operationName") or span.get("name", "")
@@ -130,6 +157,6 @@ if __name__ == "__main__":
 
         plt.tight_layout()
         plt.savefig(CHART_OUTPUT_PATH, dpi=300)
-        print(f"\nPrivacy chart saved successfully to: {CHART_OUTPUT_PATH}")
+        print(f"\n[✓] Privacy chart saved successfully to: {CHART_OUTPUT_PATH}")
     else:
         print("[!] No leaky attributes found. Ensure data/raw_traces has trace JSON files.")
