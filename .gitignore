@@ -2,7 +2,7 @@
 collector/traces.json
 .idea/
 
-# Python Virtual Environments (NEVER push venv!)
+# virtualenvs - don't commit these
 venv/
 .venv/
 env/
@@ -10,7 +10,7 @@ ENV/
 env.bak/
 venv.bak/
 
-# Python Cache & Compiled Artifacts
+# python cache / compiled stuff
 __pycache__/
 *.pyc
 *.pyo
@@ -20,28 +20,36 @@ __pycache__/
 .pytest_cache/
 .coverage
 
-# Jupyter Notebook Checkpoints
+# jupyter checkpoints
 .ipynb_checkpoints/
 */.ipynb_checkpoints/*
 
-# macOS System Files
+# macOS junk
 .DS_Store
 .AppleDouble
 .LSOverride
 ._*
 
-# IDEs & Text Editors (VS Code, PyCharm, IntelliJ)
+# editors / IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 *.iml
 
-# Large Telemetry Data Dumps (Keep Git repo lightweight)
+# the trace dumps are huge, keep them out of git.
+# using ** here on purpose - data/raw_traces/*.json wouldn't catch the per-run
+# subfolders since a single * won't cross a /, and the harvester makes one
+# folder per run.
+data/raw_traces/**
+data/processed/**
+data/runs/**
 data/*.json
 data/*.csv
 !data/.gitkeep
-
+!data/raw_traces/.gitkeep
+!data/processed/.gitkeep
+!data/runs/.gitkeep
 
 data/raw_traces/*.json
 .env

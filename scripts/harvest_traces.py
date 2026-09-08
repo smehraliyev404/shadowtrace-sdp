@@ -1,121 +1,195 @@
+"""Raw trace harvester: pull one run's time slice out of Jaeger to disk.
+
+Jaeger only stages the last hour and has no concept of a "run", so the start/end
+bracket is what turns a slice into a run.
+"""
+
 import os
 import json
 import time
-import requests
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
+
+import requests
 
 JAEGER_BASE_URL = os.getenv("JAEGER_BASE_URL", "http://localhost:16686")
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "data/raw_traces")
-DEFAULT_SERVICES = ["frontend", "checkoutservice", "paymentservice", "cartservice", "emailservice", "shadowtrace-test-service"]
+RAW_TRACES_DIR = os.getenv("RAW_TRACES_DIR", "data/raw_traces")
+RUNS_DIR = os.getenv("RUNS_DIR", "data/runs")
+
+# Jaeger traces itself, those spans aren't part of the Boutique call graph
+EXCLUDED_SERVICES = {"jaeger-all-in-one", "jaeger-query", "jaeger-collector"}
+
+# every service that can root a trace, not just frontend - the attacker pod and
+# authservice root traces that never touch frontend (a frontend-only query missed
+# the lateral ones).
+DEFAULT_ROOT_SERVICES = ["frontend", "attacker", "authservice", "ssrfservice"]
+
 
 def ensure_directory_exists(directory_path):
-    if not os.path.exists(directory_path):
-        os.makedirs(directory_path)
-        print(f"[+] Created directory: {directory_path}")
+    os.makedirs(directory_path, exist_ok=True)
+    return directory_path
 
-def get_all_services_from_jaeger():
-    """Dynamically fetches all service names currently registered in Jaeger."""
-    try:
-        url = f"{JAEGER_BASE_URL}/api/services"
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            services = response.json().get("data", [])
-            # Filter out internal jaeger query service
-            return [s for s in services if s and s != "jaeger-query"]
-    except Exception as e:
-        print(f"[!] Warning: Could not fetch service list from Jaeger: {e}")
-    return []
 
-def fetch_traces_from_jaeger(service_name, limit=300):
-    """Queries Jaeger REST API for raw traces belonging to a specific service."""
+def fetch_traces(service, start_us, end_us, limit):
+    """Query Jaeger for traces of `service` in a bracket (start/end in microseconds)."""
     url = f"{JAEGER_BASE_URL}/api/traces"
+    # filter to one service inside the run's bracket; Jaeger wants microseconds
     params = {
-        "service": service_name,
-        "limit": limit,
-        "lookback": "1h"
+        "service": service,
+        "start": int(start_us),
+        "end": int(end_us),
+        "limit": int(limit),
     }
     try:
-        response = requests.get(url, params=params, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            return data.get("data", [])
-        else:
-            print(f"[!] Warning: Received status code {response.status_code} for service '{service_name}'")
-            return []
+        response = requests.get(url, params=params, timeout=30)
     except requests.exceptions.RequestException as e:
-        print(f"[!] Error connecting to Jaeger API at {url}: {e}")
+        print(f"[!] Error connecting to Jaeger at {url}: {e}")
         return []
 
-def save_trace_payload(trace_data, output_dir):
-    """Saves a single trace payload as a structured JSON file."""
-    trace_id = trace_data.get("traceID", f"unknown_{int(time.time()*1000)}")
-    file_path = os.path.join(output_dir, f"trace_{trace_id}.json")
+    if response.status_code != 200:
+        print(f"[!] Jaeger returned {response.status_code} for service '{service}'")
+        return []
+    return response.json().get("data") or []
 
-    output_payload = {
-        "harvested_at": datetime.utcnow().isoformat() + "Z",
+
+def trace_start_us(trace):
+    """Earliest span start in the trace, in microseconds."""
+    starts = [s.get("startTime", 0) for s in trace.get("spans", [])]
+    return min(starts) if starts else 0
+
+
+def trace_services(trace):
+    # every service that shows up anywhere in the trace (used to drop Jaeger's own)
+    return {p.get("serviceName") for p in (trace.get("processes") or {}).values()}
+
+
+def save_trace(trace, output_dir):
+    trace_id = trace.get("traceID", f"unknown_{int(time.time() * 1000)}")
+    # persist structure + timing only - request payloads never touch disk
+    payload = {
+        "harvested_at": datetime.now(timezone.utc).isoformat(),
         "traceID": trace_id,
-        "span_count": len(trace_data.get("spans", [])),
-        "processes": trace_data.get("processes", {}),
-        "spans": trace_data.get("spans", [])
+        "span_count": len(trace.get("spans", [])),
+        "processes": trace.get("processes", {}),
+        "spans": trace.get("spans", []),
     }
+    with open(os.path.join(output_dir, f"trace_{trace_id}.json"), "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+    return payload["span_count"]
 
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(output_payload, f, indent=2)
 
-    return len(trace_data.get("spans", []))
+def harvest_run(run_id, start_ts, end_ts, services=None, limit=5000,
+                chunk_seconds=30, raw_dir=RAW_TRACES_DIR, runs_dir=RUNS_DIR):
+    """Harvest one run's slice into <raw_dir>/<run_id>/ and write a manifest.
 
-def run_harvesting_pipeline(target_count, output_dir):
-    ensure_directory_exists(output_dir)
+    Queries every root service (frontend-only gave 0 lateral traces); the shared
+    `seen` set dedups by traceID across services.
+    """
+    services = services or DEFAULT_ROOT_SERVICES
+    start_us = start_ts * 1_000_000   # our args are seconds; Jaeger's API is microseconds
+    end_us = end_ts * 1_000_000
 
-    print(f"[*] Starting Trace Harvester. Target: {target_count}+ traces.")
-    print(f"[*] Target Directory: {os.path.abspath(output_dir)}")
+    output_dir = ensure_directory_exists(os.path.join(raw_dir, run_id))
+    ensure_directory_exists(runs_dir)
 
-    # 1. Try dynamic service discovery
-    discovered_services = get_all_services_from_jaeger()
-    if discovered_services:
-        print(f"[✓] Dynamically discovered services in Jaeger: {discovered_services}")
-        services_to_query = discovered_services
-    else:
-        print(f"[*] No dynamic services found in Jaeger yet. Using default list: {DEFAULT_SERVICES}")
-        services_to_query = DEFAULT_SERVICES
+    print(f"[*] Run: {run_id}")
+    print(f"[*] Bracket: {datetime.fromtimestamp(start_ts)} -> {datetime.fromtimestamp(end_ts)} "
+          f"({end_ts - start_ts:.0f}s)")
+    print(f"[*] Querying Jaeger services={services} in {chunk_seconds}s slices")
 
-    total_traces_saved = 0
-    total_spans_saved = 0
-    saved_trace_ids = set()
+    # slice the bracket instead of one giant query: a query returns only the
+    # newest `limit` traces, so a loud burst (http_flood) crowds out quieter ones.
+    # slicing caps each query so every part of the run gets covered.
+    saved, spans_saved, seen = 0, 0, set()
+    dropped_bounds, dropped_excluded = 0, 0
 
-    for service in services_to_query:
-        print(f"[*] Querying Jaeger for service: '{service}'...")
-        traces = fetch_traces_from_jaeger(service, limit=300)
+    slice_start = start_us
+    step = int(chunk_seconds * 1_000_000)
+    while slice_start < end_us:
+        slice_end = min(slice_start + step, end_us)
+        for service in services:
+            traces = fetch_traces(service, slice_start, slice_end, limit)
+            if len(traces) >= limit:
+                print(f"    [!] slice {(slice_start-start_us)/1e6:.0f}-{(slice_end-start_us)/1e6:.0f}s "
+                      f"service '{service}' hit the {limit} cap -- shrink --chunk-seconds")
+            for trace in traces:
+                trace_id = trace.get("traceID")
+                if not trace_id or trace_id in seen:   # already saw this one
+                    continue
+                # keep only traces that start inside the bracket
+                t_start = trace_start_us(trace)
+                if not (start_us <= t_start <= end_us):
+                    dropped_bounds += 1
+                    continue
+                if trace_services(trace) & EXCLUDED_SERVICES:
+                    dropped_excluded += 1
+                    continue
+                seen.add(trace_id)
+                spans_saved += save_trace(trace, output_dir)
+                saved += 1
+        slice_start = slice_end
 
-        for trace in traces:
-            trace_id = trace.get("traceID")
-            if trace_id and trace_id not in saved_trace_ids:
-                saved_trace_ids.add(trace_id)
-                spans_in_trace = save_trace_payload(trace, output_dir)
+    print(f"[*] harvested across {((end_us - start_us) / step):.0f} slices, "
+          f"{len(services)} services each.")
 
-                total_traces_saved += 1
-                total_spans_saved += spans_in_trace
+    manifest = {
+        "run_id": run_id,
+        "started_at": start_ts,
+        "ended_at": end_ts,
+        "harvested_at": datetime.now(timezone.utc).isoformat(),
+        "jaeger_services_queried": services,
+        "traces_saved": saved,
+        "spans_saved": spans_saved,
+        "traces_dropped_out_of_bounds": dropped_bounds,
+        "traces_dropped_excluded_service": dropped_excluded,
+        "output_dir": os.path.abspath(output_dir),
+    }
+    manifest_path = os.path.join(runs_dir, f"{run_id}.harvest.json")
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2)
 
-                print(f"    [-->] Saved trace_{trace_id}.json ({spans_in_trace} spans)")
+    print("\n" + "=" * 60)
+    print(f"[✓] Saved {saved} traces / {spans_saved} spans -> {output_dir}")
+    print(f"    dropped {dropped_bounds} outside bracket, "
+          f"{dropped_excluded} for excluded services")
+    print(f"    manifest -> {manifest_path}")
+    print("=" * 60)
+    return manifest
 
-            if total_traces_saved >= target_count:
-                break
 
-        if total_traces_saved >= target_count:
-            break
-
-    print("\n" + "="*60)
-    print(f"[✓] HARVESTING COMPLETE!")
-    print(f"    - Total Traces Saved: {total_traces_saved}")
-    print(f"    - Total Spans Captured: {total_spans_saved}")
-    print(f"    - Dataset Path: {os.path.abspath(output_dir)}")
-    print("="*60)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="ShadowTrace Raw Trace Harvester")
-    parser.add_argument("--target", type=int, default=500, help="Target number of traces to harvest (default: 500)")
-    parser.add_argument("--output", type=str, default=OUTPUT_DIR, help="Output directory for raw JSON files")
+def main():
+    parser = argparse.ArgumentParser(description="ShadowTrace raw trace harvester")
+    parser.add_argument("--run-id", required=True, help="Run identifier, e.g. run_01")
+    parser.add_argument("--start", type=float,
+                        help="Run start as a unix timestamp (seconds)")
+    parser.add_argument("--end", type=float,
+                        help="Run end as a unix timestamp (seconds)")
+    parser.add_argument("--last", type=float,
+                        help="Convenience: harvest the last N seconds instead of --start/--end")
+    parser.add_argument("--services", nargs="+", default=None,
+                        help=f"Jaeger services to query (default: {DEFAULT_ROOT_SERVICES}). "
+                             "Every service that can root a trace must be listed.")
+    parser.add_argument("--limit", type=int, default=5000,
+                        help="Max traces per time slice (default: 5000)")
+    parser.add_argument("--chunk-seconds", type=int, default=30,
+                        help="Harvest in slices this many seconds wide (default: 30). "
+                             "Smaller slices avoid a high-volume burst crowding out others.")
     args = parser.parse_args()
 
-    run_harvesting_pipeline(args.target, args.output)
+    if args.last is not None:
+        end_ts = time.time()
+        start_ts = end_ts - args.last
+    elif args.start is not None and args.end is not None:
+        start_ts, end_ts = args.start, args.end
+    else:
+        parser.error("provide either --last SECONDS, or both --start and --end")
+
+    if end_ts <= start_ts:
+        parser.error("--end must be after --start")
+
+    harvest_run(args.run_id, start_ts, end_ts, services=args.services,
+                limit=args.limit, chunk_seconds=args.chunk_seconds)
+
+
+if __name__ == "__main__":
+    main()
