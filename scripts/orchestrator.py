@@ -1,10 +1,7 @@
-"""Attack orchestrator: fire attacks in random bursts over live normal traffic.
-
-Logs each burst's start/end to data/runs/<run_id>.json - the only label source.
-Enforces two things: bursts must overlap normal traffic (--i-have-normal-traffic,
-since you run k6 yourself), and each burst is >= MIN_BURST_SECONDS so a 60s label
-window can sit fully inside it.
-"""
+# This file is used in order to fire attack in random bursts over live normal traffic 
+# So basically what is happening is that we are running the normal traffic in the background 
+# and simultanouesly we are running the attacks in bursts, and these bursts are completely random
+# and then we are harvesting the traces from the jaeger and parsing the traces
 
 import os
 import sys
@@ -15,20 +12,18 @@ import argparse
 import subprocess
 from datetime import datetime, timezone
 
-PYTHON = sys.executable  # whatever python is running this (the venv)
+PYTHON = sys.executable 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 RUNS_DIR = os.path.join(PROJECT_ROOT, "data", "runs")
 
-WINDOW_SECONDS = 60          # keep in sync with parse_traces.WINDOW_SECONDS
-MIN_BURST_SECONDS = 90       # bigger than one window so a window can sit fully inside
-MIN_GAP_SECONDS = 75         # bigger than one window so each gap gives a clean normal window
+WINDOW_SECONDS = 60          
+MIN_BURST_SECONDS = 90      
+MIN_GAP_SECONDS = 75        
 DEFAULT_GAP_RANGE = (75, 120)
 
-# the 8 attacks we collect. {python}/{root}/{duration} get filled in per burst.
-# lateral_movement kubectl-execs into the attacker pod, so --dry-run swaps in
-# sleep to test the schedule without a live cluster.
+# These are all 8 attacks used throughout all the runs 
 ATTACKS = {
     "http_flood":             "{python} {root}/scripts/attacks/http_flood.py --duration {duration}",
     "exfiltration":           "{python} {root}/scripts/attacks/exfiltration.py --duration {duration}",
@@ -48,13 +43,13 @@ def run_burst(attack_type, duration, dry_run):
     else:
         cmd = ATTACKS[attack_type].format(python=PYTHON, root=PROJECT_ROOT, duration=duration)
 
-    # wall-clock start/end bracket the burst - this pair is what labels the windows
+    # this is timing used to label when attack window is running
     start_ts = time.time()
     print(f"[burst] {attack_type:14s} start {datetime.fromtimestamp(start_ts):%H:%M:%S} "
           f"dur~{duration}s :: {cmd}")
     try:
         subprocess.run(cmd, shell=True, check=False,
-                       timeout=duration + 30)   # hard stop if the attack script hangs
+                       timeout=duration + 30)  
     except subprocess.TimeoutExpired:
         print(f"[!] burst '{attack_type}' exceeded its timeout; killed.")
     end_ts = time.time()
@@ -62,7 +57,7 @@ def run_burst(attack_type, duration, dry_run):
           f"({end_ts - start_ts:.0f}s)")
     return start_ts, end_ts
 
-
+# orchestration that runs the attacks 
 def orchestrate(run_id, attacks, n_bursts, burst_range, gap_range, dry_run, seed):
     if seed is not None:
         random.seed(seed)
@@ -88,9 +83,7 @@ def orchestrate(run_id, attacks, n_bursts, burst_range, gap_range, dry_run, seed
     print(f"[*] burst {lo}-{hi}s, gap {gap_range[0]}-{gap_range[1]}s, "
           f"{'DRY-RUN (sleep)' if dry_run else 'LIVE attacks'}\n")
 
-    # deal from a shuffled deck, not random.choice - choice drifted badly (once
-    # lateral_movement 15x vs exfiltration 4x). the deck gives every attack an
-    # equal count per cycle, random order, and reshuffles when empty.
+    # this part makes sure that we create kind of balance so there is not a great gap between attack bursts 
     deck = []
 
     def draw_attack():
@@ -102,8 +95,8 @@ def orchestrate(run_id, attacks, n_bursts, burst_range, gap_range, dry_run, seed
 
     bursts = []
     for i in range(n_bursts):
-        attack_type = draw_attack()          # next attack off the shuffled deck
-        duration = random.randint(lo, hi)    # random burst length within range
+        attack_type = draw_attack()          
+        duration = random.randint(lo, hi)   
         s, e = run_burst(attack_type, duration, dry_run)
         bursts.append({"attack_type": attack_type,
                        "start_ts": round(s, 3), "end_ts": round(e, 3)})
@@ -111,7 +104,7 @@ def orchestrate(run_id, attacks, n_bursts, burst_range, gap_range, dry_run, seed
         if i < n_bursts - 1:
             gap = random.randint(*gap_range)
             print(f"[gap]   {gap}s of pure normal traffic\n")
-            time.sleep(gap)   # quiet gap -> a clean stretch of normal-only windows
+            time.sleep(gap)   
 
     ended_at = time.time()
 

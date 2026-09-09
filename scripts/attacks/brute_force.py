@@ -1,8 +1,5 @@
-"""Brute-force login: fast failed logins against authservice POST /login.
+# a typical brute-force login attack against Microservice-demo-shop 
 
-Looks structurally normal (same auth->frontend edge as a real login), so the
-tell is timing: call_repetition spikes, temporal_jitter drops to ~0.
-"""
 
 import time
 import argparse
@@ -12,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 
 USERNAMES = ["admin", "root", "user", "test", "operator", "guest"]
-STOP = threading.Event()  # flipped when the run is over; every worker watches it
+STOP = threading.Event()
 
 
 def worker(url, label, counters, pause):
@@ -22,13 +19,13 @@ def worker(url, label, counters, pause):
     while not STOP.is_set():
         i += 1
         try:
-            # cycle usernames with an always-wrong password -> server should answer 401
+            # cycle usernames with an always-wrong password as a result server should answer 401
             r = s.post(url, data={"username": USERNAMES[i % len(USERNAMES)],
                                   "password": f"guess{i}"}, timeout=5)
-            counters["401" if r.status_code == 401 else "other"] += 1  # tally rejects vs anything odd
+            counters["401" if r.status_code == 401 else "other"] += 1 
         except requests.RequestException:
-            counters["err"] += 1   # timeout / dropped connection - count it and carry on
-        time.sleep(pause)   # keep it a rare event under normal traffic
+            counters["err"] += 1   
+        time.sleep(pause) 
 
 
 def main():
@@ -49,9 +46,9 @@ def main():
         for _ in range(args.concurrency):
             pool.submit(worker, args.url, args.label, counters, args.pause)
         try:
-            time.sleep(args.duration)   # let them run for the whole burst
+            time.sleep(args.duration)  
         finally:
-            STOP.set()                  # time's up -> signal every worker to stop
+            STOP.set()               
     total = sum(counters.values())
     print(f"[brute] done: {total} attempts in {time.time()-start:.0f}s "
           f"({counters['401']} rejected, {counters['err']} errors)")

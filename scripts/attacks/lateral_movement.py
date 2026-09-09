@@ -1,9 +1,5 @@
-"""Lateral movement (the headline threat): host-side wrapper.
-
-Real work is in the attacker pod (src/attacker/lateral.py) - a gRPC client that
-calls internal services directly, skipping the frontend. Signal: edges like
-attacker->productcatalog with no precedent -> causal_history_distance spikes.
-"""
+# an attack inside the cluster when a malicious pod is integrates 
+# and is used to call internal services directly, skipping the frontend
 
 import argparse
 import subprocess

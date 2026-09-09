@@ -4,7 +4,9 @@ No SQL DB and we ignore payloads, so this only fakes the shape of a scan. Signal
 on frontend->productcatalog: call_repetition up, high error rate, low jitter.
 Known not to separate cleanly here.
 """
-
+# SQL injection simulating an attack against Microservice-demo-shop.
+# Even though there is not database yet
+# we still consider this and reject the malicious payloads 
 import time
 import argparse
 

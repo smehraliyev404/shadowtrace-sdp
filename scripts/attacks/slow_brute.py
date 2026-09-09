@@ -1,8 +1,5 @@
-"""Slow brute force: failed logins spaced out so no short window spikes.
-
-Too sparse for the 60s window, but over ~300s call_repetition on the auth edge
-climbs past baseline - so the wider accumulation window catches it.
-"""
+# Just a classic brute force login attempt but a very slow one 
+# as if it is a ton of simple requests over long period of time 
 
 import time
 import argparse
@@ -33,8 +30,8 @@ def main():
             s.post(args.url, data={"username": USERNAMES[attempts % len(USERNAMES)],
                                    "password": f"guess{attempts}"}, timeout=5)
         except requests.RequestException:
-            pass                      # ignore errors, the pacing is what matters here
-        time.sleep(args.interval)     # the gap is the whole point - keeps the rate low
+            pass                      
+        time.sleep(args.interval)    
     print(f"[slow] done: {attempts} attempts in {time.time()-start:.0f}s "
           f"(~{attempts/(time.time()-start):.1f}/s, low by design)")
 

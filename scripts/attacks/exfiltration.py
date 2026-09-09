@@ -1,10 +1,5 @@
-"""Exfiltration / bulk enumeration: walk the whole catalog over and over.
-
-Looks like a foothold pulling everything systematically. Unlike the flood,
-breadth is high: causal_history and path_entropy widen because it hits paths a
-normal session never would. Slow and single-threaded on purpose - the tell is
-the shape of the access, not volume.
-"""
+# a simulation when a large amount of data is exfiltrated from a system
+# in our case specifically it is the product catalog and currency list
 
 import time
 import argparse
@@ -18,14 +13,14 @@ PRODUCT_IDS = [
 ]
 CURRENCIES = ["EUR", "USD", "JPY", "GBP", "TRY", "CAD"]
 
-
+# this function is used to sweep through all the endpoints of the system and make sure that all the data is exfiltrated
 def sweep(session, base_url):
     """One full pass over every data-bearing endpoint."""
     n = 0
-    session.get(base_url + "/", timeout=5); n += 1   # homepage first, then enumerate everything
-    for pid in PRODUCT_IDS:                      # walk the whole catalog
+    session.get(base_url + "/", timeout=5); n += 1  
+    for pid in PRODUCT_IDS:                    
         session.get(f"{base_url}/product/{pid}", timeout=5); n += 1
-    for cur in CURRENCIES:                        # and every currency
+    for cur in CURRENCIES:                       
         session.post(f"{base_url}/setCurrency",
                      data={"currency_code": cur}, timeout=5); n += 1
     session.get(base_url + "/cart", timeout=5); n += 1
@@ -51,11 +46,11 @@ def main():
 
     while time.time() - start < args.duration:
         try:
-            total += sweep(session, args.url)   # one exhaustive pass over everything
+            total += sweep(session, args.url)  
             passes += 1
         except requests.RequestException:
-            pass                                 # failed mid-sweep, just start the next pass
-        time.sleep(args.pause)                   # methodical spacing, not a flood
+            pass                               
+        time.sleep(args.pause)                   
 
     elapsed = time.time() - start
     print(f"[exfil] done: {passes} full catalog sweeps, {total} requests in {elapsed:.0f}s")

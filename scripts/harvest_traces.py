@@ -1,8 +1,4 @@
-"""Raw trace harvester: pull one run's time slice out of Jaeger to disk.
-
-Jaeger only stages the last hour and has no concept of a "run", so the start/end
-bracket is what turns a slice into a run.
-"""
+# So this part is Jaeger which is basically fetching all spans and as a result of a run turns them into traces which are the stored in our data folder.
 
 import os
 import json
@@ -31,9 +27,8 @@ def ensure_directory_exists(directory_path):
 
 
 def fetch_traces(service, start_us, end_us, limit):
-    """Query Jaeger for traces of `service` in a bracket (start/end in microseconds)."""
     url = f"{JAEGER_BASE_URL}/api/traces"
-    # filter to one service inside the run's bracket; Jaeger wants microseconds
+    # parameters inside the request are in microseconds to make it very very precise and avoid overlapping traces 
     params = {
         "service": service,
         "start": int(start_us),
@@ -53,19 +48,16 @@ def fetch_traces(service, start_us, end_us, limit):
 
 
 def trace_start_us(trace):
-    """Earliest span start in the trace, in microseconds."""
     starts = [s.get("startTime", 0) for s in trace.get("spans", [])]
     return min(starts) if starts else 0
 
 
 def trace_services(trace):
-    # every service that shows up anywhere in the trace (used to drop Jaeger's own)
     return {p.get("serviceName") for p in (trace.get("processes") or {}).values()}
 
 
 def save_trace(trace, output_dir):
     trace_id = trace.get("traceID", f"unknown_{int(time.time() * 1000)}")
-    # persist structure + timing only - request payloads never touch disk
     payload = {
         "harvested_at": datetime.now(timezone.utc).isoformat(),
         "traceID": trace_id,
@@ -77,16 +69,11 @@ def save_trace(trace, output_dir):
         json.dump(payload, f, indent=2)
     return payload["span_count"]
 
-
+# Here we provide an amount of time and other parameters for Jaeger to store traces and then send them to not overload the system.
 def harvest_run(run_id, start_ts, end_ts, services=None, limit=5000,
                 chunk_seconds=30, raw_dir=RAW_TRACES_DIR, runs_dir=RUNS_DIR):
-    """Harvest one run's slice into <raw_dir>/<run_id>/ and write a manifest.
-
-    Queries every root service (frontend-only gave 0 lateral traces); the shared
-    `seen` set dedups by traceID across services.
-    """
     services = services or DEFAULT_ROOT_SERVICES
-    start_us = start_ts * 1_000_000   # our args are seconds; Jaeger's API is microseconds
+    start_us = start_ts * 1_000_000  
     end_us = end_ts * 1_000_000
 
     output_dir = ensure_directory_exists(os.path.join(raw_dir, run_id))
@@ -97,9 +84,6 @@ def harvest_run(run_id, start_ts, end_ts, services=None, limit=5000,
           f"({end_ts - start_ts:.0f}s)")
     print(f"[*] Querying Jaeger services={services} in {chunk_seconds}s slices")
 
-    # slice the bracket instead of one giant query: a query returns only the
-    # newest `limit` traces, so a loud burst (http_flood) crowds out quieter ones.
-    # slicing caps each query so every part of the run gets covered.
     saved, spans_saved, seen = 0, 0, set()
     dropped_bounds, dropped_excluded = 0, 0
 
@@ -114,9 +98,8 @@ def harvest_run(run_id, start_ts, end_ts, services=None, limit=5000,
                       f"service '{service}' hit the {limit} cap -- shrink --chunk-seconds")
             for trace in traces:
                 trace_id = trace.get("traceID")
-                if not trace_id or trace_id in seen:   # already saw this one
+                if not trace_id or trace_id in seen:  
                     continue
-                # keep only traces that start inside the bracket
                 t_start = trace_start_us(trace)
                 if not (start_us <= t_start <= end_us):
                     dropped_bounds += 1

