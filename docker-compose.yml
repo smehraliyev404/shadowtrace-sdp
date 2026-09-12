@@ -18,3 +18,24 @@ services:
       - ./collector:/etc/otelcol-contrib/output
     depends_on:
       - jaeger
+
+  # Local/dev Mongo only - each teammate's own sandbox, not shared data.
+  # The team's common live dataset lives on MongoDB Atlas (see .env.example
+  # and docs/db-schema-notes.md for the one-time cluster setup); every
+  # script picks Atlas automatically once MONGO_URI is set in .env, and
+  # falls back to this local container otherwise.
+  mongodb:
+    image: mongo:8.0
+    container_name: shadowtrace-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:

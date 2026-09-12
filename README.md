@@ -13,7 +13,11 @@ Standard observability pipelines (OpenTelemetry) create a **Privacy-Security Par
 shadowtrace-sdp/
 ├── DB/                           # Database design & MongoDB collection schemas
 │   ├── Schemas/                  # Collection JSON schemas (alerts, privacy_audits, etc.)
-│   └── indexes.js                # Database indexes and TTL configuration
+│   ├── indexes.js                # Reference: full-system indexes (all 8 collections, eventual)
+│   ├── mongo_client.py           # Shared connection helper (Atlas MONGO_URI or local docker-compose)
+│   ├── setup_database.py         # Creates validators/indexes for the 4 collections used this phase
+│   ├── test_connection.py        # Quick connectivity + collection list sanity check
+│   └── ingest_traces.py          # Batch ETL: raw trace JSON -> graphs + raw_traces (with retention/TTL + downsampling)
 ├── User_Design/                  # Appendix B deliverables
 │   ├── erd-schema.png            # Entity-Relationship diagram for MongoDB
 │   ├── uc1-developer-redaction.png # Figma Journey: Dev configures redaction
@@ -223,6 +227,34 @@ python3 analytics/privacy_entropy_audit.py
 * **Output Artifacts (Reference Baseline Run, N=500 traces):**
   * Terminal prints summary metrics: ~4,056 spans, ~2,940 DAG edges, ~10,157 flagged sensitive attributes.
   * Generates high-resolution chart saved directly to: `docs/diagrams/privacy_leakage_chart.png`.
+
+---
+
+## 🗄️ Shared Team Database (MongoDB)
+
+The team shares one live MongoDB dataset (Atlas free tier) instead of everyone
+harvesting and training against separate local copies. Full setup steps,
+which collections are in use this phase, and the retention/TTL policy for
+raw traces are documented in **[docs/db-schema-notes.md](docs/db-schema-notes.md)**.
+
+Quick version:
+```bash
+# One-time, after copying .env.example to .env and filling in MONGO_URI (Atlas) or
+# MONGO_USERNAME/MONGO_PASSWORD (local docker-compose mongodb service):
+python DB/setup_database.py
+
+# Sanity check:
+python DB/test_connection.py
+
+# Ingest a directory of harvested trace_*.json files (one attack_type per run):
+python DB/ingest_traces.py --input data/raw_traces --attack-type normal --split train
+```
+
+Only 4 of the 8 collections in the User Design ERD are used at this stage
+(`raw_traces`, `trials`, `graphs`, `model_versions`) — see the notes doc for
+why the other 4 are deferred to Semester 2, and for the reasoning behind
+retaining `normal` traces for only 7 days (TTL-enforced) while any attack
+class is kept indefinitely.
 
 ---
 

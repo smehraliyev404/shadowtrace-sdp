@@ -1,0 +1,13 @@
+{
+  "_id": "ObjectId",
+  "trace_id": "String",
+  "trial_id": "String",
+  "attack_type": "normal | http_flood | brute_force | sqli | ssrf | exfiltration",
+  "captured_at": "ISODate",
+  "source_ref": "String or null (path/identifier of the original raw JSON file - used instead of embedding trace_payload at bulk scale)",
+  "trace_payload": "Object or null (only embedded for retention_class=long_term_attack; bulk normal traces reference source_ref instead)",
+  "processing_status": "pending | parsed | processed | failed",
+  "retention_class": "temporary | long_term_attack",
+  "expires_at": "ISODate or null (null = long_term_attack, never auto-deleted by the TTL index)",
+  "schema_version": "Number"
+}

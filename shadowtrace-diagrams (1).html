@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShadowTrace — Architecture, Progress, Publication</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0A1418;
+  --ink2:#0E1D24;
+  --panel:#122631;
+  --panel2:#16303C;
+  --stroke:#204353;
+  --text:#DCEDF3;
+  --muted:#7FA0AE;
+  --dim:#4E7284;
+  --sig:#4FE0C0;        /* structural signal that survives redaction */
+  --pii:#FF8C42;        /* payload / sensitive content */
+  --alarm:#FF5F6D;      /* gap, blocker, missed deadline */
+  --gold:#F3C053;       /* partial / in progress */
+  --violet:#9F8BF5;     /* external literature / baseline */
+  --shadow:0 18px 44px -20px rgba(0,0,0,.85);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:
+    radial-gradient(1200px 700px at 12% -8%, #14313D 0%, transparent 62%),
+    radial-gradient(900px 600px at 96% 8%, #16232B 0%, transparent 58%),
+    var(--ink);
+  color:var(--text);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+button{font-family:inherit;color:inherit;cursor:pointer}
+
+/* ---------- shell ---------- */
+.shell{display:flex;flex-direction:column;height:100vh;height:100dvh}
+
+header{
+  display:flex;align-items:center;gap:22px;flex-wrap:wrap;
+  padding:12px 20px;border-bottom:1px solid var(--stroke);
+  background:linear-gradient(180deg,rgba(18,38,49,.95),rgba(10,20,24,.9));
+  backdrop-filter:blur(8px);
+}
+.brand{display:flex;align-items:baseline;gap:12px;min-width:0}
+.brand h1{
+  font-family:"Space Grotesk",sans-serif;font-size:19px;font-weight:700;
+  letter-spacing:-.4px;margin:0;white-space:nowrap;
+}
+.brand h1 .glyph{color:var(--sig)}
+.brand span{color:var(--dim);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+nav{display:flex;gap:4px;background:rgba(0,0,0,.28);padding:4px;border-radius:11px;border:1px solid var(--stroke)}
+nav button{
+  border:0;background:transparent;color:var(--muted);
+  padding:7px 15px;border-radius:8px;font-size:13.5px;font-weight:500;
+  transition:background .18s,color .18s;white-space:nowrap;
+}
+nav button:hover{color:var(--text)}
+nav button[aria-selected="true"]{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--stroke)}
+
+.tools{display:flex;gap:8px;margin-left:auto;align-items:center;flex-wrap:wrap}
+.chip{
+  border:1px solid var(--stroke);background:rgba(0,0,0,.22);color:var(--muted);
+  padding:6px 12px;border-radius:999px;font-size:12.5px;transition:.18s;
+}
+.chip:hover{border-color:var(--dim);color:var(--text)}
+.chip[aria-pressed="true"]{background:rgba(79,224,192,.12);border-color:var(--sig);color:var(--sig)}
+.chip.warn[aria-pressed="true"]{background:rgba(255,140,66,.13);border-color:var(--pii);color:var(--pii)}
+
+/* ---------- body ---------- */
+.stage{flex:1;display:flex;min-height:0;position:relative}
+.canvas-wrap{flex:1;position:relative;min-width:0;overflow:hidden}
+svg.canvas{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+svg.canvas.dragging{cursor:grabbing}
+.view{display:none;height:100%}
+.view.active{display:block}
+
+.hint{
+  position:absolute;left:16px;bottom:14px;z-index:4;
+  font-size:11.5px;color:var(--dim);font-family:"IBM Plex Mono",monospace;
+  background:rgba(10,20,24,.78);border:1px solid var(--stroke);
+  padding:5px 10px;border-radius:7px;pointer-events:none;
+}
+.zoombar{position:absolute;right:16px;bottom:14px;z-index:4;display:flex;gap:6px}
+.zoombar button{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--stroke);
+  background:rgba(10,20,24,.85);color:var(--muted);font-size:15px;line-height:1;
+}
+.zoombar button:hover{color:var(--sig);border-color:var(--sig)}
+.zoombar button.wide{width:auto;padding:0 12px;font-size:12px}
+
+/* ---------- inspector ---------- */
+aside{
+  width:360px;flex:none;border-left:1px solid var(--stroke);
+  background:linear-gradient(180deg,rgba(18,38,49,.62),rgba(10,20,24,.94));
+  overflow-y:auto;padding:20px 20px 40px;
+}
+aside h2{
+  font-family:"Space Grotesk",sans-serif;font-size:17px;font-weight:600;
+  margin:0 0 4px;letter-spacing:-.2px;line-height:1.25;
+}
+.i-kicker{font-size:11.5px;color:var(--dim);font-family:"IBM Plex Mono",monospace;margin-bottom:14px;word-break:break-all}
+.i-status{
+  display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;
+  padding:4px 11px;border-radius:999px;margin-bottom:14px;border:1px solid currentColor;
+}
+.i-status i{width:7px;height:7px;border-radius:50%;background:currentColor;display:block}
+aside p{margin:0 0 14px;color:#B9D3DD;font-size:13.8px;line-height:1.62}
+aside .lab{
+  font-size:11px;font-weight:600;color:var(--dim);letter-spacing:.09em;
+  margin:20px 0 9px;padding-bottom:6px;border-bottom:1px solid var(--stroke);
+}
+aside ul{margin:0 0 4px;padding-left:17px}
+aside li{margin:0 0 8px;font-size:13.3px;color:#B9D3DD;line-height:1.55}
+aside li b{color:var(--text);font-weight:600}
+aside code,.mono{font-family:"IBM Plex Mono",monospace;font-size:12.4px;color:var(--sig)}
+aside a{color:var(--sig);text-decoration:none;border-bottom:1px solid rgba(79,224,192,.35)}
+aside a:hover{border-bottom-color:var(--sig)}
+.empty{color:var(--dim);font-size:13.5px;line-height:1.7}
+.metric{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed rgba(32,67,83,.8);font-size:13px}
+.metric span:first-child{color:var(--muted)}
+.metric span:last-child{font-family:"IBM Plex Mono",monospace;color:var(--text);text-align:right}
+
+/* ---------- svg primitives ---------- */
+.grid-line{stroke:rgba(32,67,83,.36);stroke-width:1}
+.band-frame{fill:rgba(18,38,49,.34);stroke:var(--stroke);stroke-width:1;rx:14}
+.band-label{
+  font-family:"Space Grotesk",sans-serif;font-size:15px;font-weight:600;
+  fill:var(--muted);letter-spacing:.02em;
+}
+.band-note{
+  font-size:11.6px;fill:var(--dim);font-family:"IBM Plex Mono",monospace;
+  paint-order:stroke fill;stroke:var(--ink);stroke-width:3.4px;stroke-linejoin:round;
+}
+
+.group-frame{fill:rgba(22,48,60,.28);stroke:rgba(32,67,83,.9);stroke-width:1;stroke-dasharray:5 5;rx:12}
+.group-label{
+  font-size:11.4px;font-family:"IBM Plex Mono",monospace;fill:var(--dim);letter-spacing:.06em;
+  paint-order:stroke fill;stroke:var(--ink);stroke-width:3.4px;stroke-linejoin:round;
+}
+
+.node{cursor:pointer}
+.node-bg{fill:var(--panel);rx:10;transition:fill .18s}
+.node:hover .node-bg{fill:var(--panel2)}
+.node-edge{fill:none;stroke-width:1.7;rx:10;stroke-dasharray:11 6;}
+.animate .node-edge{animation:ants 2.6s linear infinite}
+@keyframes ants{to{stroke-dashoffset:-34}}
+.node-halo{fill:none;stroke-width:1;rx:14;opacity:0;transition:opacity .2s}
+.node.sel .node-halo{opacity:.55}
+.node.sel .node-edge{stroke-width:2.6}
+.n-title{font-family:"Space Grotesk",sans-serif;font-size:14px;font-weight:600;fill:var(--text)}
+.n-sub{font-size:11.2px;font-family:"IBM Plex Mono",monospace;fill:var(--muted)}
+.n-tag{font-size:10px;font-family:"IBM Plex Mono",monospace;letter-spacing:.05em}
+
+.st-done .node-edge,.st-done .node-halo{stroke:var(--sig)}
+.st-partial .node-edge,.st-partial .node-halo{stroke:var(--gold)}
+.st-planned .node-edge,.st-planned .node-halo{stroke:var(--dim)}
+.st-planned .node-edge{stroke-dasharray:3 6}
+.st-gap .node-edge,.st-gap .node-halo{stroke:var(--alarm)}
+.st-ref .node-edge,.st-ref .node-halo{stroke:var(--violet)}
+.st-done .n-tag{fill:var(--sig)} .st-partial .n-tag{fill:var(--gold)}
+.st-planned .n-tag{fill:var(--dim)} .st-gap .n-tag{fill:var(--alarm)} .st-ref .n-tag{fill:var(--violet)}
+
+.edge{fill:none;stroke-width:1.6;opacity:.75}
+.edge.pii{stroke:var(--pii)}
+.edge.sig{stroke:var(--sig)}
+.edge.ctl{stroke:var(--dim);stroke-dasharray:4 5}
+.edge.loop{stroke:var(--violet);stroke-dasharray:6 5;opacity:.6}
+.edge.dimmed{opacity:.13}
+.edge-label{
+  font-size:10.6px;font-family:"IBM Plex Mono",monospace;fill:#9BBAC7;
+  paint-order:stroke fill;stroke:var(--ink);stroke-width:4px;stroke-linejoin:round;
+  pointer-events:none;
+}
+.pkt{opacity:0}
+.animate .pkt{opacity:1}
+
+.boundary{stroke:var(--alarm);stroke-width:2;stroke-dasharray:9 7;opacity:.85}
+.animate .boundary{animation:ants 3.4s linear infinite}
+.boundary-label{font-size:11.6px;font-family:"IBM Plex Mono",monospace;fill:var(--alarm);letter-spacing:.07em}
+
+.axis{stroke:var(--stroke);stroke-width:1.4}
+.tick{stroke:rgba(32,67,83,.85);stroke-width:1}
+.tick-label{
+  font-size:11px;font-family:"IBM Plex Mono",monospace;fill:var(--dim);
+  paint-order:stroke fill;stroke:var(--ink);stroke-width:3.4px;stroke-linejoin:round;
+}
+.today{stroke:var(--sig);stroke-width:1.6;stroke-dasharray:5 5}
+.today-label{
+  font-size:11.4px;font-family:"IBM Plex Mono",monospace;fill:var(--sig);
+  paint-order:stroke fill;stroke:var(--ink);stroke-width:3.6px;stroke-linejoin:round;
+}
+.dl-label{
+  font-family:"IBM Plex Mono",monospace;
+  paint-order:stroke fill;stroke:var(--ink);stroke-width:3.6px;stroke-linejoin:round;
+}
+.boundary-label{paint-order:stroke fill;stroke:var(--ink);stroke-width:3.6px;stroke-linejoin:round}
+
+.bar-track{fill:rgba(0,0,0,.34);rx:5}
+.bar-fill{rx:5}
+.bar-label{font-size:12.4px;fill:#B9D3DD}
+.bar-pct{
+  font-size:11.4px;font-family:"IBM Plex Mono",monospace;fill:var(--muted);
+  paint-order:stroke fill;stroke:var(--ink);stroke-width:3.2px;stroke-linejoin:round;
+}
+
+.heading{font-family:"Space Grotesk",sans-serif;font-size:16px;font-weight:600;fill:var(--text)}
+.subheading{font-size:12px;fill:var(--dim);font-family:"IBM Plex Mono",monospace}
+
+.legend-sw{rx:3}
+.legend-tx{font-size:11.6px;fill:var(--muted)}
+
+.faded{opacity:.16;transition:opacity .3s}
+.node,.edge,.pkt,g.grp{transition:opacity .3s}
+
+.reduced .node-edge,.reduced .boundary{animation:none!important}
+.reduced .pkt{display:none}
+
+@media (max-width:1080px){
+  aside{width:310px}
+}
+@media (max-width:820px){
+  body{overflow:auto}
+  .stage{flex-direction:column}
+  .canvas-wrap{height:62vh;flex:none}
+  aside{width:auto;border-left:0;border-top:1px solid var(--stroke);max-height:none}
+  header{gap:12px;padding:10px 14px}
+  .brand span{display:none}
+  .tools{width:100%;margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){
+  .node-edge,.boundary{animation:none!important}
+  .pkt{display:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div class="brand">
+    <h1><span class="glyph">◈</span> ShadowTrace</h1>
+    <span>Privacy-preserving anomaly detection for microservices · SDP 2026–27</span>
+  </div>
+  <nav role="tablist">
+    <button role="tab" data-view="arch" aria-selected="true">Architecture</button>
+    <button role="tab" data-view="prog" aria-selected="false">Progress</button>
+    <button role="tab" data-view="pub" aria-selected="false">Publication</button>
+  </nav>
+  <div class="tools" id="tools"></div>
+</header>
+
+<div class="stage">
+  <div class="canvas-wrap">
+    <div class="view active" id="view-arch"><svg class="canvas" id="svg-arch"></svg></div>
+    <div class="view" id="view-prog"><svg class="canvas" id="svg-prog"></svg></div>
+    <div class="view" id="view-pub"><svg class="canvas" id="svg-pub"></svg></div>
+    <div class="hint" id="hint">Click any box for detail · drag to pan · scroll to zoom</div>
+    <div class="zoombar">
+      <button id="zin" title="Zoom in">+</button>
+      <button id="zout" title="Zoom out">−</button>
+      <button id="zfit" class="wide" title="Fit to screen">Fit</button>
+    </div>
+  </div>
+  <aside id="inspector"></aside>
+</div>
+</div>
+
+<script>
+"use strict";
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) {
+    if (attrs[k] === null || attrs[k] === undefined) continue;
+    n.setAttribute(k, attrs[k]);
+  }
+  if (parent) parent.appendChild(n);
+  return n;
+};
+const TODAY = new Date(2026, 8, 2); // 2 Sept 2026
+
+/* =====================================================================
+   VIEW 1 — ARCHITECTURE
+   Two planes: the offline research pipeline (Semester 1, already measured)
+   and the in-stream runtime system (Semester 2, engineered).
+   ===================================================================== */
+
+const NW = 246, NH = 82;
+const N = (id, x, y, t, s, status, tag, plane, detail, opt) => Object.assign(
+  {id, x, y, w: NW, h: NH, t, s, status, tag, plane, detail}, opt || {}
+);
+
+const archNodes = [
+  /* ---------- RESEARCH PLANE ---------- */
+  N("boutique", 60, 150, ["Google Online Boutique"], "11 polyglot microservices", "done", "M1 · DONE", "R", {
+    what: "The target environment. Google's e-commerce benchmark, deployed on a single-node Minikube cluster, gives realistic multi-tier call paths without cloud cost.",
+    where: "README.md → kubectl apply .../kubernetes-manifests.yaml",
+    facts: [
+      "11 services across Go, C#, Node.js, Python and Java",
+      "<b>cartservice</b> patched to 512Mi — the stock 128Mi limit causes OOMKilled mid-run",
+      "Google's built-in <b>loadgenerator</b> scaled to 0 replicas so only k6 produces telemetry",
+      "Every deployment gets ENABLE_TRACING=1 and an explicit OTEL_SERVICE_NAME"
+    ]
+  }),
+  N("k6norm", 60, 262, ["k6 — normal traffic"], "normal_traffic.js · 5 VUs · 2m", "done", "M2 · DONE", "R", {
+    what: "Synthetic shopper workload: homepage → product → add to cart → checkout, with randomised 2–7 s think-time so inter-arrival timing is not artificially regular.",
+    where: "k6_test/normal_traffic.js",
+    facts: [
+      "Human think-time jitter is deliberate — <b>temporal jitter</b> is one of the four detection features, so benign traffic must not look metronomic",
+      "Runs against the port-forwarded frontend on :8080"
+    ]
+  }),
+  N("k6atk", 60, 374, ["k6 — attack scenarios"], "5 classes · not yet written", "gap", "M2 · MISSING", "R", {
+    what: "The five application-layer attack classes the detector must classify: HTTP flood, brute-force login, SQL-injection probe, SSRF-like probe, and exfiltration simulation.",
+    where: "k6_test/ — only normal_traffic.js exists today",
+    facts: [
+      "Without these there is <b>no positive class</b>, so M3 cannot be trained or evaluated at all",
+      "Brute-force is the critical one: Ma (2026) shows it collapses under topology-only models because the call path (frontend→auth) is two nodes and one edge, identical to a real login",
+      "This is currently the single hardest blocker on the critical path"
+    ],
+    note: "Blocks M3."
+  }),
+  N("otelsdk", 366, 150, ["OTel auto-instrumentation"], "SDK in every service", "done", "M1 · DONE", "R", {
+    what: "OpenTelemetry SDKs inside each service emit spans carrying traceId, spanId and parentSpanId — the raw material the whole framework is built on.",
+    where: "README.md → kubectl set env deployment/… OTEL_EXPORTER_OTLP_ENDPOINT",
+    facts: [
+      "Fidelity-first by design: span attributes routinely carry headers, query params and DB statements",
+      "That default is exactly the privacy problem the project measures"
+    ]
+  }),
+  N("otlp", 366, 262, ["OTLP transport"], "gRPC :4317 · HTTP :4318", "done", "M1 · DONE", "R", {
+    what: "Vendor-neutral wire protocol carrying telemetry from pods in Minikube to the host collector via host.minikube.internal.",
+    where: "collector/config.yaml → receivers.otlp (0.0.0.0 binding)",
+    facts: ["gRPC 4317 for service-to-collector, HTTP 4318 for web ingest"]
+  }),
+  N("jaeger", 672, 150, ["Jaeger all-in-one"], "UI :16686 · REST /api/traces", "done", "M1 · DONE", "R", {
+    what: "Trace store and query layer. The UI is for eyeballing call paths; the REST API is what actually matters, because the harvester reads from it.",
+    where: "docker-compose.yml → jaegertracing/all-in-one",
+    facts: ["COLLECTOR_OTLP_ENABLED=true exposes 4317/4318 directly on Jaeger"]
+  }),
+  N("collector", 672, 274, ["OTel Collector (contrib)"], "otlp → file exporter", "gap", "NO PROCESSORS", "R", {
+    what: "The collector runs, but its pipeline is receiver → exporter with nothing in between. The Privacy Layer — the entire point of the framework — does not exist in the pipeline yet.",
+    where: "collector/config.yaml",
+    facts: [
+      "Current pipeline: <code>traces: receivers[otlp] → exporters[file]</code>",
+      "No <code>processors:</code> key is defined at all",
+      "This is the slot the Semester 2 Go processor drops into — it is intentionally empty for now, but worth naming plainly rather than implying the privacy layer is live"
+    ],
+    note: "Placeholder for M5."
+  }),
+  N("harvest", 978, 150, ["harvest_traces.py"], "Jaeger REST · --target 500", "done", "M2 · DONE", "R", {
+    what: "Automated harvester. Queries /api/services for the live service list, then /api/traces per service with a 1-hour lookback, writing each trace to its own JSON file.",
+    where: "scripts/harvest_traces.py",
+    facts: ["Verified end-to-end", "Target of 500 traces reached and committed"]
+  }),
+  N("traces", 978, 274, ["data/raw_traces/"], "500 trace JSON files", "partial", "M2 · UNLABELLED", "R", {
+    what: "The Semester 1 dataset. 500 harvested Jaeger traces, committed to the repository.",
+    where: "data/raw_traces/trace_*.json",
+    facts: [
+      "500 files · <b>3,852 spans</b> · <b>2,758 parent→child edges</b> on re-run",
+      "Only <b>5 distinct service nodes</b> resolve, and three of them are <code>unknown_service</code>, <code>unknown_service:server</code>, <code>unknown_service:checkoutservice</code>",
+      "Roughly two thirds of spans therefore carry no usable service identity — and service identity <i>is</i> the node label in the DAG",
+      "Nothing carries an attack label, so this dataset trains nothing yet"
+    ],
+    note: "Service-name resolution needs fixing before this data can back a claim."
+  }),
+  N("parse", 1284, 150, ["parse_traces.py"], "spans → DAG · w_ij", "done", "M2 · DONE", "R", {
+    what: "Groups spans by traceId, walks CHILD_OF references, and builds a NetworkX DiGraph per trace with time-weighted edges.",
+    where: "analytics/parse_traces.py",
+    facts: [
+      "Edge weight <code>w_ij = T_start(child) − T_start(parent)</code>, clamped at 0",
+      "Measured on the committed dataset: avg span duration <b>17.58 ms</b>, avg inter-service latency <b>96.44 ms</b>",
+      "Note the report defines w_ij as T_end(child) − T_start(parent); the code uses start-to-start. Pick one before the numbers go in the paper."
+    ],
+    note: "Definition mismatch between report and code."
+  }),
+  N("audit", 1284, 274, ["privacy_entropy_audit.py"], "H(X) ≥ 3.5 · PII regex", "done", "RQ1 · DONE", "R", {
+    what: "The empirical answer to RQ1: how much sensitive material does default OTel instrumentation actually leak? Shannon entropy plus four regex families, over both span tags and process metadata.",
+    where: "analytics/privacy_entropy_audit.py",
+    facts: [
+      "<code>H(X) = −Σ p(xᵢ)·log₂ p(xᵢ)</code>, threshold τ = 3.5 bits/char",
+      "Regex families: Email, JWT, Credit_Card, IPv4_Address",
+      "Measured: <b>11,345 flagged attributes</b> across 500 traces (mean H = 3.52)",
+      "<b>3,179</b> IPv4 hits — internal pod addressing, the reconnaissance surface named in the README",
+      "Top leaking keys: otel.scope.name (3,147), rpc.method (2,843), server.address (2,574), net.peer.ip, process.command_args"
+    ]
+  }),
+  N("chart", 1284, 398, ["privacy_leakage_chart.png"], "leakage per microservice", "done", "FIGURE", "R", {
+    what: "Generated bar chart of flagged attributes per service — the figure that carries RQ1 in the paper.",
+    where: "docs/diagrams/privacy_leakage_chart.png",
+    facts: ["Regenerated by re-running the audit script", "Currently the x-axis inherits the unknown_service labels from the harvest gap"]
+  }),
+  N("gnn", 1590, 150, ["st_gnn_model.py"], "PyG · GCNConv ×2 → pool", "partial", "M3 · TEMPLATE", "R", {
+    what: "The detector. Currently a spatial-only skeleton: two graph convolutions, global mean pooling, and a linear classifier.",
+    where: "analytics/st_gnn_model.py",
+    facts: [
+      "<code>GCNConv(25→32) → ReLU → GCNConv(32→32) → global_mean_pool → Linear(32→2)</code>",
+      "Missing the <b>temporal half</b> — no GRU or temporal-attention layer over the sliding window, so it is a GNN, not yet an ST-GNN",
+      "No dataset loader, no training loop, no trial-level split, no Random Forest / MLP comparison",
+      "The temporal component is not optional: it is the entire argument for beating Ma's 0.405 on brute-force"
+    ],
+    note: "The spatial half exists; the part that makes the thesis work does not."
+  }),
+  N("baseline", 1590, 274, ["Ma (2026) baseline"], "arXiv:2605.24283", "ref", "LITERATURE", "R", {
+    what: "The empirical constraint the whole design answers to. Ma tests exactly the assumption ShadowTrace's privacy layer depends on — that call-path structure alone carries enough signal.",
+    where: "Research Framework §5 · SSP Report §2.2",
+    facts: [
+      "Topology only, trial-level split: <b>Macro-F1 0.405</b>",
+      "+ log features: 0.734 · + service metrics: 0.825",
+      "Graph-level random split: 0.955 — flagged by the paper itself as optimistic leakage",
+      "Random Forest and MLP on flattened features <b>beat</b> the shallow GCN under the honest split",
+      "ShadowTrace target: <b>Macro-F1 ≥ 0.90</b> on redacted topology"
+    ]
+  }),
+
+  /* ---------- RUNTIME PLANE ---------- */
+  N("svc", 60, 790, ["Services + Envoy sidecars"], "Istio mesh · Kubernetes", "planned", "M6", "A", {
+    what: "In the deployed system, telemetry originates from both application SDKs and Envoy sidecar proxies, so the mesh layer is a first-class source rather than an afterthought.",
+    where: "Planned — no Istio manifests in the repo yet",
+    facts: ["Istio v1.20+ per the confirmed tool list", "Envoy metrics are scraped by Prometheus for the overhead measurement"]
+  }),
+  N("dev", 60, 916, ["Developer"], "configures redaction", "planned", "ACTOR · UC1", "A", {
+    what: "Journey B.1. The developer does not label fields by hand — the system scores each endpoint and proposes a tier; the developer reviews, reweights, or overrides.",
+    where: "User Design §1.2",
+    facts: [
+      "Framed as a <b>pre-merge gate</b>: a service that exports payload content cannot ship (GDPR Art. 25)",
+      "The Preview stage is the only point in the entire system where payload content is ever visible, and only locally",
+      "Pain point at Commit: unindexed policy version lookups → answered by a compound index on service_name + version"
+    ]
+  }),
+  N("ingest", 366, 790, ["OTLP ingest"], "unredacted at this point", "planned", "M5", "A", {
+    what: "Raw telemetry arrives at the collector still carrying headers, tokens and query parameters. This is the last point at which the full signal exists.",
+    where: "collector/config.yaml → receivers.otlp",
+    facts: ["Everything downstream of the Privacy Layer is metadata-blind by construction"]
+  }),
+  N("entropy", 672, 728, ["Entropy scorer"], "H(X) ≥ τ · sliding window", "planned", "M5", "A", {
+    what: "Catches unstructured secrets — API keys, JWTs, bearer tokens, key fragments — that have no fixed grammar but are statistically close to random.",
+    where: "Go processor, planned for otelcol-contrib",
+    facts: [
+      "English prose sits at roughly 2.5–4.0 bits/char; base64 and hex secrets cluster above 4.5",
+      "Minimum-length and character-class heuristics suppress false positives from benign UUID correlation IDs",
+      "Go is chosen because the collector is Go — in-memory manipulation, no serialisation round-trip"
+    ]
+  }),
+  N("regex", 672, 830, ["Pattern matcher"], "email · JWT · card · IPv4", "planned", "M5", "A", {
+    what: "Structured PII with a fixed grammar. Carries equal weight to entropy, because entropy misses short and legacy-format secrets.",
+    where: "Ported from analytics/privacy_entropy_audit.py",
+    facts: ["Already implemented and validated in Python — this milestone is a translation, not a discovery"]
+  }),
+  N("hmac", 672, 932, ["Keyed HMAC tokenizer"], "linkable, not reversible", "planned", "M5", "A", {
+    what: "Sensitive values are replaced, not deleted. A keyed one-way token means the same underlying value stays linkable across services while the value itself never leaves the boundary.",
+    where: "Research Framework §2.1.2",
+    facts: [
+      "Deletion would destroy the fact that <i>the same actor touched A, B and C</i> — which is the lateral-movement signal",
+      "Under GDPR this is <b>pseudonymization (Art. 4(5))</b>, not anonymization; Recital 26 keeps pseudonymous data personal",
+      "The signing key is therefore a secret in its own right — anyone holding it can reverse the mapping"
+    ]
+  }),
+  N("ts", 672, 1034, ["Governance engine  Tₛ"], "tier: maximal / coarse / minimal", "planned", "M5 · UC4", "A", {
+    what: "Blanket redaction either over-scrubs or under-scrubs. Tₛ scores each endpoint and picks a redaction tier automatically.",
+    where: "SSP Report §3.4 · Research Framework §2.1.3",
+    facts: [
+      "<code>Tₛ = Σ H(xₖ) · D_asset · P_depth</code>",
+      "D = 0 public (catalogservice) · D = 3 PII tier (cart, email) · D = 5 critical (payment, auth)",
+      "P_depth is topological distance from public ingress",
+      "The framework doc gives an alternative weighted form <code>Tₛ = w₁E + w₂C + w₃R</code> — the two definitions need reconciling before submission",
+      "Dual-use is acknowledged openly: the blast-radius term also ranks which endpoints are most worth compromising"
+    ],
+    note: "Two competing formulas across documents."
+  }),
+  N("recon", 1050, 790, ["Reconstructor"], "5 s sliding window · stateful", "planned", "M5", "A", {
+    what: "Reassembles already-scrubbed span fragments into request-level DAGs, then emits an ordered sequence of them over a sliding window.",
+    where: "Research Framework §2.2 · SSP Report §3.2",
+    facts: [
+      "<code>Gᵢ = (Vᵢ, Eᵢ, W)</code> — one graph per request, not one static system graph",
+      "Edge features: inter-span latency, rolling z-score against that specific caller→callee pair, call count",
+      "The <b>sequence</b> is the unit of analysis, not any single graph — credential stuffing and slow exfiltration only exist as a trend",
+      "Memory must be freed on window expiry; the system test is explicitly a leak test"
+    ]
+  }),
+  N("feat", 1050, 916, ["Feature windows"], "4 payload-free signals", "planned", "M5", "A", {
+    what: "The four signals that stand in for the log and metric features Ma's baseline needed — computed without reading a single payload byte.",
+    where: "DB/Schemas/feature_windows.json",
+    facts: [
+      "<b>Path entropy</b> — how varied the routes are; lateral movement broadens the distribution",
+      "<b>Causal history</b> — graph-edit distance from a learned baseline; flags edges with no precedent",
+      "<b>Temporal jitter</b> — timing irregularity relative to that edge's history",
+      "<b>Call repetition</b> — the one that catches brute-force, where topology provably cannot",
+      "Each is stored with its own baseline so drift is measurable rather than assumed"
+    ]
+  }),
+  N("stgnn", 1356, 728, ["ST-GNN inference"], "spatial GCN/GAT + temporal GRU", "planned", "M3→M5", "A", {
+    what: "Spatial encoder over each graph, temporal encoder over the window. The temporal half is what separates this from single-snapshot graph classification.",
+    where: "analytics/st_gnn_model.py → inference service",
+    facts: [
+      "<code>Â = D^(−1/2)(A + I)D^(−1/2)</code>, <code>H⁽ˡ⁺¹⁾ = σ(Â·H⁽ˡ⁾·W⁽ˡ⁾)</code> (Kipf & Welling)",
+      "GAT is the documented alternative where edge latency and z-score should modulate attention weight",
+      "Classes: normal · lateral_movement · brute_force · probing",
+      "Evaluation must use a <b>trial-level split</b> — Ma's own methodological finding, and the split is fixed before any numbers are seen"
+    ]
+  }),
+  N("alert", 1356, 854, ["Alert"], "class · severity · confidence", "planned", "M5 · UC2", "A", {
+    what: "The detection surfaced to a human, presenting all four signals side by side rather than collapsing them into one score.",
+    where: "DB/Schemas/alerts.json",
+    facts: [
+      "Each signal answers a different failure mode, so a single number would hide which one fired",
+      "Alerts hold window <i>references</i>, not copies — windows expire on TTL, alerts must survive for audit"
+    ]
+  }),
+  N("admin", 1356, 980, ["Administrator"], "triages the alert", "planned", "ACTOR · UC2", "A", {
+    what: "Journey B.2. The hardest constraint in the whole design lands here.",
+    where: "User Design §1.3",
+    facts: [
+      "The administrator is used to reading request payloads as evidence and <b>can no longer do so</b> — that data was never stored",
+      "The interface compensates by showing its reasoning: which paths appeared that normally do not, and how often",
+      "Pain point at Examine Paths: unindexed trace queries → answered by an index on trace_id"
+    ]
+  }),
+  N("policy", 1662, 728, ["Istio policy generator"], "AuthorizationPolicy YAML", "planned", "M6 · UC3", "A", {
+    what: "Journey B.3, and the most consequential component in the system. Confidence above 0.95 compiles an Istio policy that blocks the offending edge.",
+    where: "User Design §1.4 · DB/Schemas/policy_actions.json",
+    facts: [
+      "Three brakes: <b>dry-run is the default</b>, human approval above a severity threshold, and every policy carries an expiry",
+      "Acting automatically on a detector whose accuracy is still an open question is how a security tool causes the outage it was built to prevent",
+      "Deliberately last on the schedule and the component that can be cut without invalidating the research result"
+    ]
+  }),
+  N("verify", 1662, 854, ["Verify & roll back"], "re-measure · expire", "planned", "M6", "A", {
+    what: "After enforcement, the system re-measures the same features that raised the alert and rolls the policy back if the anomaly has not subsided.",
+    where: "User Design §1.4 — the Verify stage",
+    facts: [
+      "Converts an assumption into a measurable claim: it does not merely act, it establishes whether acting helped",
+      "Pain point: feature windows scanned without a compound index → answered by trial_id + window_start"
+    ]
+  }),
+  N("auditor", 1662, 980, ["Auditor"], "exports the privacy score", "planned", "ACTOR · UC4", "A", {
+    what: "Journey B.4. Produces evidence, not operational output — signed policy history, retention configuration, and a measured privacy number.",
+    where: "User Design §1.5 · DB/Schemas/privacy_audits.json",
+    facts: [
+      "The number is reported as a <b>measurement with its method named</b>, never as a guarantee",
+      "It is never shown alone — privacy is always displayed beside the detection accuracy it cost",
+      "Auditors work from documents, so the interface is an exportable artefact from the outset"
+    ]
+  }),
+  N("mongo", 1050, 1064, ["MongoDB"], "8 collections · TTL 7 d", "partial", "SCHEMA DONE", "A", {
+    what: "Document store chosen because the feature vector is the object of study — its shape changes with every experimental condition, which would be a migration under a relational schema.",
+    where: "DB/Schemas/*.json · DB/indexes.js",
+    facts: [
+      "Collections: redaction_policies · feature_windows · alerts · policy_actions · graphs · trials · model_versions · privacy_audits",
+      "<code>expireAfterSeconds: 604800</code> on feature_windows — storage limitation under <b>Art. 5(1)(e)</b> enforced by the database, not a cron job",
+      "Schemas and indexes are committed; no application code touches a live database yet",
+      "Not Neo4j: tens of thousands of small request graphs read whole is a document read, not a traversal"
+    ]
+  }),
+  N("perf", 1356, 1106, ["Performance profiling"], "k6 · Prometheus · Grafana", "planned", "M7", "A", {
+    what: "The overhead budget that makes the whole pipeline deployable rather than merely correct.",
+    where: "Final Report §7",
+    facts: [
+      "Target: <b>&lt; 5 ms added latency per span</b> at 100–1,000 req/s",
+      "Zero span loss under standard load — repetition is a count, so dropped spans push it silently downward and a brute-force attack goes missed",
+      "Lossy sampling is disabled; lossy runs are invalid rather than corrected",
+      "Prometheus/Grafana are not in docker-compose.yml yet"
+    ]
+  })
+];
+
+const archEdges = [
+  {f:"boutique", t:"otelsdk", k:"pii"},
+  {f:"k6norm", t:"boutique", k:"ctl", a:"BT", lbl:"drives"},
+  {f:"otelsdk", t:"otlp", k:"pii", a:"TB"},
+  {f:"otlp", t:"jaeger", k:"pii"},
+  {f:"otlp", t:"collector", k:"pii"},
+  {f:"jaeger", t:"harvest", k:"pii", lbl:"REST"},
+  {f:"harvest", t:"traces", k:"pii", a:"TB"},
+  {f:"traces", t:"parse", k:"pii"},
+  {f:"traces", t:"audit", k:"pii"},
+  {f:"audit", t:"chart", k:"sig", a:"TB"},
+  {f:"parse", t:"gnn", k:"sig"},
+  {f:"audit", t:"gnn", k:"sig"},
+  {f:"baseline", t:"gnn", k:"loop", a:"BT", lbl:"beat 0.405"},
+  {f:"k6atk", t:"traces", k:"ctl", lbl:"labels"},
+
+  {f:"svc", t:"ingest", k:"pii"},
+  {f:"ingest", t:"entropy", k:"pii"},
+  {f:"ingest", t:"regex", k:"pii"},
+  {f:"entropy", t:"hmac", k:"pii", a:"TB"},
+  {f:"regex", t:"hmac", k:"pii", a:"TB"},
+  {f:"hmac", t:"ts", k:"pii", a:"TB"},
+  {f:"hmac", t:"recon", k:"cross", lbl:"redacted"},
+  {f:"ts", t:"recon", k:"cross"},
+  {f:"recon", t:"feat", k:"sig", a:"TB"},
+  {f:"recon", t:"stgnn", k:"sig"},
+  {f:"feat", t:"stgnn", k:"sig"},
+  {f:"stgnn", t:"alert", k:"sig", a:"TB"},
+  {f:"alert", t:"admin", k:"sig", a:"TB"},
+  {f:"alert", t:"policy", k:"sig", lbl:"conf > 0.95"},
+  {f:"policy", t:"verify", k:"sig", a:"TB"},
+  {f:"verify", t:"svc", k:"ctl", a:"BB", lbl:"enforce / roll back"},
+  {f:"feat", t:"mongo", k:"sig", a:"TB"},
+  {f:"admin", t:"mongo", k:"ctl", a:"LR2"},
+  {f:"dev", t:"ts", k:"ctl", lbl:"policy"},
+  {f:"auditor", t:"mongo", k:"ctl", a:"BB"},
+  {f:"mongo", t:"stgnn", k:"loop", a:"RT", lbl:"active learning"},
+  {f:"stgnn", t:"perf", k:"ctl", a:"TB"},
+  {f:"gnn", t:"stgnn", k:"loop", a:"BT", lbl:"M3 → M5 handoff"}
+];
+
+/* =====================================================================
+   VIEW 2 — PROGRESS
+   ===================================================================== */
+
+const milestones = [
+  {id:"M1", title:"Lab setup & OTel pipeline", l1:"M1 · Lab setup", l2:"& OTel pipeline", date:new Date(2026,9,15), dateStr:"15 Oct 2026", lead:"Member #3 — Kubernetes",
+   status:"done", pct:95,
+   crit:"All pods Running in Minikube; collector confirms OTLP ingest on 4317 and 4318.",
+   evidence:["docker-compose.yml runs Jaeger all-in-one plus otelcol-contrib","collector/config.yaml binds both OTLP ports on 0.0.0.0","README documents the cartservice 512Mi patch and loadgenerator scale-down","Per-deployment OTEL_SERVICE_NAME env vars are scripted"],
+   gaps:["Two thirds of harvested spans still resolve as unknown_service, so the env-var step is not fully taking effect"]},
+  {id:"M2", title:"Privacy audit & dataset", l1:"M2 · Privacy audit", l2:"& dataset creation", date:new Date(2026,10,15), dateStr:"15 Nov 2026", lead:"Member #2 — SWE",
+   status:"partial", pct:55,
+   crit:"500+ raw trace JSON files collected; Shannon entropy audit quantifies PII leakage.",
+   evidence:["500 trace files committed to data/raw_traces/","harvest_traces.py verified against the Jaeger REST API","Audit re-runs clean: 3,852 spans, 2,758 edges, 11,345 flagged attributes","privacy_leakage_chart.png regenerates"],
+   gaps:["The five k6 attack scenarios do not exist — only normal_traffic.js","No trial records, no attack labels, no train/test split assignment","Service-name resolution breaks the node identity the DAG depends on"]},
+  {id:"M3", title:"ST-GNN algorithmic validation", l1:"M3 · ST-GNN", l2:"algorithmic validation", date:new Date(2026,11,15), dateStr:"15 Dec 2026", lead:"Team Lead — ML",
+   status:"started", pct:25,
+   crit:"Macro-F1 ≥ 0.90 on redacted topology, against Ma's 0.405 baseline.",
+   evidence:["st_gnn_model.py defines GCNConv ×2 → global_mean_pool → Linear","PyTorch Geometric 2.8 and torch 2.13 pinned in requirements.txt","NetworkX DAG construction already produces the input structure"],
+   gaps:["No temporal layer — currently a spatial GNN, not an ST-GNN","No dataset loader, no training loop, no evaluation harness","No trial-level split and no Random Forest / MLP comparison, both of which the research plan explicitly commits to","Blocked upstream: there is no labelled data to train on"]},
+  {id:"M4", title:"Semester 1 capstone submission", l1:"M4 · Semester 1", l2:"capstone submission", date:new Date(2026,11,30), dateStr:"30 Dec 2026", lead:"All members",
+   status:"partial", pct:75,
+   crit:"Final Report, Appendix A and Appendix B complete, supervisor-verified, committed.",
+   evidence:["Research Framework v1.0 drafted in full","SSP Research Report drafted through §6","User Design complete with four journey maps and the ERD","Four Figma journey PNGs and erd-schema.png committed"],
+   gaps:["Sections 1–3 of the Final Report still read as an outline in places","M3 results are referenced but do not exist yet"]},
+  {id:"M5", title:"In-stream Go processor", l1:"M5 · In-stream", l2:"Go processor", date:new Date(2027,1,15), dateStr:"15 Feb 2027", lead:"Member #2 — SWE",
+   status:"planned", pct:0,
+   crit:"Custom Go module compiles inside otelcol-contrib; unit tests confirm in-memory redaction above the entropy threshold.",
+   evidence:["Python reference implementation of the entropy and regex logic already validated"],
+   gaps:["No Go module in the repository","collector/config.yaml defines no processors stage","Redis sliding-window buffer not started"]},
+  {id:"M6", title:"Istio closed-loop enforcement", l1:"M6 · Istio", l2:"closed-loop enforcement", date:new Date(2027,2,20), dateStr:"20 Mar 2027", lead:"Member #3 — Kubernetes",
+   status:"planned", pct:0,
+   crit:"Generator emits valid AuthorizationPolicy YAML that blocks lateral movement paths in Minikube.",
+   evidence:["policy_actions schema already models dry_run / awaiting_approval / enforced, TTL and rollback"],
+   gaps:["No Istio installation or manifests in the repo","Deliberately the most expendable component — cut it and the research result still stands"]},
+  {id:"M7", title:"k6 performance profiling", l1:"M7 · k6", l2:"performance profiling", date:new Date(2027,3,15), dateStr:"15 Apr 2027", lead:"Member #2 — SWE",
+   status:"planned", pct:0,
+   crit:"< 5 ms added latency per span at 100–1,000 req/s, zero memory leaks in the window buffer.",
+   evidence:["k6 already scripted and running for the normal workload"],
+   gaps:["Prometheus and Grafana are not in docker-compose.yml","Idle-timing baseline not yet recorded, which the risk section requires before any jitter claim"]},
+  {id:"M8", title:"Final defense & code freeze", l1:"M8 · Final defense", l2:"& code freeze", date:new Date(2027,3,30), dateStr:"30 Apr 2027", lead:"All members",
+   status:"planned", pct:0,
+   crit:"Live demonstration, complete repository, successful thesis defense.",
+   evidence:["Two-week buffer allocated between M7 and M8 for tuning and rehearsal"],
+   gaps:[]}
+];
+
+const subsystems = [
+  {n:"Minikube testbed & cluster patches", p:90, s:"done"},
+  {n:"OTel instrumentation & OTLP ingest", p:85, s:"done"},
+  {n:"Trace harvesting (Jaeger REST)", p:100, s:"done"},
+  {n:"DAG parsing & time-weighted edges", p:80, s:"done"},
+  {n:"Entropy + regex privacy audit", p:75, s:"done"},
+  {n:"MongoDB schema & indexes", p:70, s:"partial"},
+  {n:"Written deliverables (A, B, report)", p:78, s:"partial"},
+  {n:"User journeys & ERD", p:95, s:"done"},
+  {n:"Service-name resolution in traces", p:35, s:"gap"},
+  {n:"Attack traffic generation (5 classes)", p:15, s:"gap"},
+  {n:"Labelled dataset & trial split", p:5, s:"gap"},
+  {n:"ST-GNN model (spatial + temporal)", p:25, s:"partial"},
+  {n:"Go in-stream privacy processor", p:0, s:"planned"},
+  {n:"Sliding-window reconstructor", p:0, s:"planned"},
+  {n:"Istio closed-loop enforcement", p:0, s:"planned"},
+  {n:"Performance profiling harness", p:0, s:"planned"}
+];
+
+const blockers = [
+  {t:"No attack traffic, no positive class", k:"critical path · blocks M3", d:"Only normal_traffic.js exists. Every downstream claim — Macro-F1, the accuracy-privacy curve, the brute-force result that is the paper's whole argument — depends on the five k6 scenarios existing first. This is the critical path.", s:"gap"},
+  {t:"Two thirds of spans have no service identity", k:"degrades every DAG node label", d:"unknown_service, unknown_service:server and unknown_service:checkoutservice account for most of the harvested dataset. Service name is the node label in the DAG, so this degrades both the graph and the leakage-per-service figure.", s:"gap"},
+  {t:"The model has no temporal half", k:"the thesis lives here", d:"st_gnn_model.py is two GCNConv layers and a mean pool. The temporal encoder is what is supposed to catch structurally identical repeated requests — remove it and the design reduces to exactly the baseline it aims to beat.", s:"gap"},
+  {t:"Two definitions of Tₛ in circulation", k:"reconcile before submission", d:"The Research Framework gives a weighted sum of three normalised signals; the SSP Report gives a product of entropy, asset sensitivity and propagation depth. Reconcile before submission — a reviewer will spot it.", s:"partial"},
+  {t:"w_ij defined two ways", k:"report vs code", d:"Report: T_end(child) − T_start(parent). Code: T_start(child) − T_start(parent). Both are defensible; only one can be in the paper.", s:"partial"},
+  {t:"Ahead of the Gantt, behind on substance", k:"~6 weeks of slack, spend it now", d:"M1 and M2 infrastructure landed roughly six weeks before their Oct/Nov targets. That buffer is real and worth spending on the labelled dataset now, while it exists.", s:"done"}
+];
+
+/* =====================================================================
+   VIEW 3 — PUBLICATION
+   ===================================================================== */
+
+const venues = [
+  {id:"popets", name:"PoPETs", full:"Proceedings on Privacy Enhancing Technologies", tier:1,
+   cost:"$0", costOk:true, travel:"publication travel-free", travelOk:true,
+   deadline:new Date(2026,10,30), dl:"Issue 3 — 30 Nov 2026 (firm)", fit:"Best fit",
+   url:"https://www.petsymposium.org/cfp27.php",
+   detail:["Diamond open access, self-published since 2022 — no APC and no submission fee, confirmed","Rolling quarterly: Issue 3 closes 30 Nov 2026, notified 1 Feb 2027; Issue 4 closes 28 Feb 2027, notified 1 May 2027","The privacy-security paradox is squarely inside its scope","PETS' 2026 policy requires in-person presentation by a co-author and no longer allows remote talks — but the paper is still published and indexed either way, which is what a Master's application needs","Submission site: submit.petsymposium.org/2027.1/"]},
+  {id:"cands", name:"Computers & Security", full:"Elsevier", tier:1,
+   cost:"$0", costOk:true, travel:"none", travelOk:true,
+   deadline:null, dl:"Rolling", fit:"Strong",
+   url:"https://www.sciencedirect.com/journal/computers-and-security",
+   detail:["Free if the Subscription / Traditional route is selected at acceptance rather than open access","Heavy recent publication history in GNN-based intrusion detection, so the reviewers will already know the baseline literature","The recommended destination for the full system paper once M7 overhead numbers exist"]},
+  {id:"jnca", name:"Journal of Network & Computer Applications", full:"Elsevier", tier:1,
+   cost:"$0", costOk:true, travel:"none", travelOk:true,
+   deadline:null, dl:"Rolling", fit:"Strong",
+   url:"https://www.sciencedirect.com/journal/journal-of-network-and-computer-applications",
+   detail:["$0 via the Subscription / Traditional route","Solid second choice if Computers & Security rejects"]},
+  {id:"tdsc", name:"IEEE TDSC / TIFS", full:"Transactions on Dependable & Secure Computing · Information Forensics & Security", tier:1,
+   cost:"$0", costOk:true, travel:"none", travelOk:true,
+   deadline:null, dl:"Rolling", fit:"Aspirational",
+   url:"https://www.computer.org/csdl/journal/tq",
+   detail:["Hybrid journals — $0 through the Subscription / Traditional route","Top-tier; a sensible target after PoPETs or a workshop has validated the results","ServiceRank, cited in the related work, was published in TDSC"]},
+  {id:"jisa", name:"Journal of Information Security & Applications", full:"Elsevier", tier:1,
+   cost:"$0", costOk:true, travel:"none", travelOk:true,
+   deadline:null, dl:"Rolling", fit:"Good",
+   url:"https://www.sciencedirect.com/journal/journal-of-information-security-and-applications",
+   detail:["$0 via the Subscription route","Fits the entropy and attention-detection angle specifically"]},
+  {id:"access", name:"IEEE Access", full:"Gold open access only", tier:1,
+   cost:"$2,160 APC", costOk:false, travel:"none", travelOk:true,
+   deadline:null, dl:"Rolling", fit:"Good, but paid",
+   url:"https://ieeeaccess.ieee.org/",
+   detail:["Mandatory $2,160 article processing charge at the 2026 rate — there is no subscription route","Fast review, roughly 4–6 weeks, and a common first publication venue","Only viable if a grant or the university covers the fee; the project otherwise runs on a $0 procurement budget"]},
+  {id:"jcc", name:"Springer J. of Cloud Computing", full:"Gold open access", tier:1,
+   cost:"~$2,000+ APC", costOk:false, travel:"none", travelOk:true,
+   deadline:null, dl:"Rolling", fit:"Decent",
+   url:"https://journalofcloudcomputing.springeropen.com",
+   detail:["Mandatory APC, likely above $2,000 — the exact figure is unconfirmed, so check before submitting","Fits the Istio / OpenTelemetry / service-mesh angle"]},
+
+  {id:"pst", name:"IEEE PST 2027", full:"Privacy, Security and Trust", tier:2,
+   cost:"registration", costOk:true, travel:"hybrid supported", travelOk:true,
+   deadline:null, dl:"CFP expected ~Nov/Dec 2026", fit:"Good",
+   url:"http://pstnet.ca/pst2026/callforpapers.html",
+   detail:["Explicit hybrid support for authors who cannot travel","The 2026 deadline of 28 April has passed; watch for the 2027 call around November or December"]},
+  {id:"eai", name:"EAI SecureComm / SmartSP", full:"EAI conference series", tier:2,
+   cost:"registration", costOk:true, travel:"online authors track", travelOk:true,
+   deadline:null, dl:"2027 CFPs not yet posted", fit:"Decent",
+   url:"https://securecomm.eai-conferences.org/2026/",
+   detail:["An Online Authors track is a built-in standard at every EAI event, so remote presentation is not a favour to negotiate","2026 cycles are closed"]},
+
+  {id:"nordsec", name:"NordSec 2026", full:"Aarhus", tier:3,
+   cost:"registration", costOk:true, travel:"unconfirmed", travelOk:false,
+   deadline:new Date(2026,7,27), dl:"27 Aug 2026", fit:"Deadline passed",
+   url:"http://nordsec2026.dk/",
+   detail:["The deadline passed on 27 August 2026, six days before today","Watch for the 2027 call"]},
+  {id:"artman", name:"ARTMAN 2026", full:"Trustworthy ML systems · ACSAC workshop", tier:3,
+   cost:"registration", costOk:true, travel:"unconfirmed", travelOk:false,
+   deadline:new Date(2026,7,31), dl:"31 Aug 2026", fit:"Deadline passed",
+   url:"https://artman-workshop.gitlab.io/",
+   detail:["The deadline passed on 31 August 2026, two days before today","This was one of the three architecture-only workshop options — two remain"]},
+  {id:"secitc", name:"SECITC 2026", full:"Bucharest", tier:3,
+   cost:"registration", costOk:true, travel:"unconfirmed", travelOk:false,
+   deadline:new Date(2026,8,7), dl:"7 Sep 2026", fit:"Closing now",
+   url:"https://secitc.eu/",
+   detail:["Five days out as of 2 September 2026","Remote presentation policy is unconfirmed — worth emailing organisers after acceptance rather than before"]},
+  {id:"acns", name:"ACNS 2027", full:"Egham, UK", tier:3,
+   cost:"registration", costOk:true, travel:"unconfirmed", travelOk:false,
+   deadline:new Date(2026,8,24), dl:"24 Sep 2026", fit:"Open",
+   url:"https://acns2027.isg.rhul.ac.uk/",
+   detail:["Three weeks out","A strong general security venue; competitive"]},
+  {id:"aidc", name:"AIDC 2026", full:"Agentic AI in cyber ops · ACSAC workshop", tier:3,
+   cost:"registration", costOk:true, travel:"unconfirmed", travelOk:false,
+   deadline:new Date(2026,8,25), dl:"25 Sep 2026", fit:"Open",
+   url:"https://aidcworkshop.github.io/",
+   detail:["Viable target for the architecture-only paper, which needs no M3 or M7 data","Workshop scope is more forgiving of a design contribution without a full empirical section"]},
+  {id:"waiti", name:"WAITI 2026", full:"AI for cyber threat intel · ACSAC workshop", tier:3,
+   cost:"registration", costOk:true, travel:"unconfirmed", travelOk:false,
+   deadline:new Date(2026,9,5), dl:"5 Oct 2026", fit:"Open — latest",
+   url:"https://waiti-workshop.github.io/",
+   detail:["The last open workshop deadline before PoPETs Issue 3","Gives the most writing time for an architecture-only submission"]},
+
+  {id:"grasec", name:"GRASEC", full:"Graph approaches for cybersecurity · ARES workshop", tier:4,
+   cost:"—", costOk:true, travel:"—", travelOk:true, deadline:null, dl:"2027 CFP",
+   fit:"Closest topical match", url:null,
+   detail:["The nearest topical match anywhere on this list for the ST-GNN component","2026 deadline has passed; watch for the 2027 call"]},
+  {id:"trustbus", name:"TrustBus", full:"Trust, privacy & security · ARES workshop", tier:4,
+   cost:"—", costOk:true, travel:"—", travelOk:true, deadline:null, dl:"2027 CFP", fit:"Good", url:null,
+   detail:["Fits the GDPR governance half of the contribution"]},
+  {id:"tpsisa", name:"IEEE TPS-ISA", full:"Trust, privacy & security in intelligent systems", tier:4,
+   cost:"—", costOk:true, travel:"—", travelOk:true, deadline:null, dl:"2027 CFP", fit:"Good", url:null,
+   detail:["Explicitly lists microservices and service-computing trust and privacy as in-scope topics"]},
+  {id:"privsymp", name:"Privacy Symposium", full:"Venice", tier:4,
+   cost:"—", costOk:true, travel:"—", travelOk:true, deadline:null, dl:"CFP opens ~Nov 2026", fit:"Strong", url:null,
+   detail:["Strong match for the GDPR Articles 5, 25 and 32 discussion","The 2027 call is expected to open around November 2026"]},
+  {id:"dimva", name:"DIMVA / RAID", full:"Core intrusion-detection venues", tier:4,
+   cost:"—", costOk:true, travel:"—", travelOk:true, deadline:null, dl:"2027 CFPs", fit:"Aspirational", url:null,
+   detail:["The core intrusion-detection community","Realistic only with complete M3 and M7 results in hand"]}
+];
+
+const pubFlow = [
+  {id:"f1", t:["Now → Oct 2026"], s:"architecture-only paper", status:"done", tag:"NO DATA NEEDED",
+   detail:{what:"Submit a design and architecture paper to an ACSAC workshop. It depends on nothing from M3 or M7, so it is feasible immediately.",
+     where:"Venue shortlist — recommended first move #1",
+     facts:["AIDC closes 25 Sep 2026, WAITI closes 5 Oct 2026 — both still open","ARTMAN (31 Aug) and NordSec (27 Aug) have already passed","A workshop architecture paper and a later journal paper do not conflict: different scopes, architecture-only versus full empirical"]}},
+  {id:"f2", t:["Will M3 land by","mid-November?"], s:"decision gate", status:"partial", tag:"GATE",
+   detail:{what:"M3 — ST-GNN validation with Macro-F1 ≥ 0.90 — is scheduled to complete 15 Dec 2026. PoPETs Issue 3 closes 30 Nov 2026. The two only meet if M3 is compressed by roughly three weeks and leaves time to write.",
+     where:"SDP Gantt M3 vs PoPETs Issue 3",
+     facts:["Reviewers treat pending results as a desk-reject signal — do not submit empirical claims before the data exists","The real constraint upstream is the missing attack dataset, not the model code","Missing a PoPETs cycle costs about three months, not the opportunity"]}},
+  {id:"f3", t:["PoPETs Issue 3"], s:"30 Nov 2026 · $0", status:"done", tag:"IF YES",
+   detail:{what:"Diamond open access, no fee, and the single best topical fit on the list. Notification 1 Feb 2027.",
+     where:"petsymposium.org",
+     facts:["Publication is travel-free and indexed","In-person presentation by a co-author is required under the 2026 policy, but publication stands regardless"]}},
+  {id:"f4", t:["PoPETs Issue 4"], s:"28 Feb 2027 · $0", status:"partial", tag:"IF NO",
+   detail:{what:"The fallback cycle. Closes 28 Feb 2027, notified 1 May 2027 — comfortably after M3 completes on 15 Dec.",
+     where:"petsymposium.org",
+     facts:["Submitting complete results here beats submitting incomplete results to Issue 3","Notification lands the day after M8, which is convenient for the defense"]}},
+  {id:"f5", t:["After M8 — 30 Apr 2027"], s:"full system paper", status:"planned", tag:"FINAL",
+   detail:{what:"With ST-GNN results and the sub-5 ms overhead numbers in hand, submit the complete system paper to Computers & Security or IEEE TDSC through the $0 Subscription route.",
+     where:"Venue shortlist — recommended move #3",
+     facts:["Zero cost, zero travel, complete results — the safest destination","Computers & Security has the heaviest recent GNN-IDS publication history","IEEE TDSC is the aspirational version of the same submission"]}}
+];
+
+/* =====================================================================
+   RENDERING
+   ===================================================================== */
+
+const inspector = document.getElementById("inspector");
+const root = document.documentElement;
+let currentView = "arch";
+const state = {plane:"both", flow:true, motion:true, filter:null, sel:null};
+
+function statusMeta(s){
+  return ({
+    done:{c:"var(--sig)", l:"Complete"},
+    partial:{c:"var(--gold)", l:"Partial"},
+    started:{c:"var(--gold)", l:"Started"},
+    planned:{c:"var(--dim)", l:"Planned"},
+    gap:{c:"var(--alarm)", l:"Gap"},
+    ref:{c:"var(--violet)", l:"Reference"}
+  })[s] || {c:"var(--dim)", l:s};
+}
+
+function drawNode(g, n){
+  const cls = "node st-" + (n.status||"planned");
+  const nodeG = el("g", {class:cls, "data-id":n.id, tabindex:"0", role:"button"}, g);
+  el("rect", {class:"node-halo", x:n.x-5, y:n.y-5, width:n.w+10, height:n.h+10, rx:14}, nodeG);
+  el("rect", {class:"node-bg", x:n.x, y:n.y, width:n.w, height:n.h, rx:10}, nodeG);
+  el("rect", {class:"node-edge", x:n.x+.9, y:n.y+.9, width:n.w-1.8, height:n.h-1.8, rx:10}, nodeG);
+  if (n.tag){
+    const tg = el("text", {class:"n-tag", x:n.x+n.w-13, y:n.y+20, "text-anchor":"end"}, nodeG);
+    tg.textContent = n.tag;
+  }
+  const ty = n.y + (n.t.length > 1 ? 34 : (n.h <= 76 ? 38 : 46));
+  n.t.forEach((line, i) => {
+    if (!line) return;
+    const t = el("text", {class:"n-title", x:n.x+14, y:ty + i*19}, nodeG);
+    t.textContent = line;
+  });
+  if (n.s){
+    const s = el("text", {class:"n-sub", x:n.x+14, y:n.y+n.h-14}, nodeG);
+    s.textContent = n.s;
+  }
+  nodeG.addEventListener("click", e => { e.stopPropagation(); select(n); });
+  nodeG.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(n); }});
+  return nodeG;
+}
+
+function anchors(a, b, mode){
+  const ax = a.x, ay = a.y, aw = a.w, ah = a.h;
+  const bx = b.x, by = b.y, bw = b.w, bh = b.h;
+  let m = mode;
+  if (!m){
+    if (bx > ax + aw - 20) m = "RL";
+    else if (bx + bw < ax + 20) m = "LR";
+    else if (by > ay + ah - 20) m = "TB";
+    else m = "BT";
+  }
+  switch(m){
+    case "RL": return {x1:ax+aw, y1:ay+ah/2, x2:bx, y2:by+bh/2, dir:"h"};
+    case "LR": return {x1:ax, y1:ay+ah/2, x2:bx+bw, y2:by+bh/2, dir:"h"};
+    case "LR2": return {x1:ax, y1:ay+ah/2, x2:bx+bw, y2:by+bh/2, dir:"h"};
+    case "TB": return {x1:ax+aw/2, y1:ay+ah, x2:bx+bw/2, y2:by, dir:"v"};
+    case "BT": return {x1:ax+aw/2, y1:ay, x2:bx+bw/2, y2:by+bh, dir:"v"};
+    case "RT": return {x1:ax+aw, y1:ay+ah/2, x2:bx+bw/2, y2:by+bh, dir:"h"};
+    case "BB": return {x1:ax+aw/2, y1:ay+ah, x2:bx+bw/2, y2:by+bh, dir:"bb"};
+    default: return {x1:ax+aw, y1:ay+ah/2, x2:bx, y2:by+bh/2, dir:"h"};
+  }
+}
+
+function pathFor(a){
+  if (a.dir === "h"){
+    const sx = a.x2 >= a.x1 ? 1 : -1;
+    const dx = Math.max(38, Math.abs(a.x2-a.x1)*0.45) * sx;
+    return `M ${a.x1} ${a.y1} C ${a.x1+dx} ${a.y1}, ${a.x2-dx} ${a.y2}, ${a.x2} ${a.y2}`;
+  }
+  if (a.dir === "bb"){
+    const drop = 74;
+    return `M ${a.x1} ${a.y1} C ${a.x1} ${a.y1+drop}, ${a.x2} ${a.y2+drop}, ${a.x2} ${a.y2}`;
+  }
+  const sy = a.y2 >= a.y1 ? 1 : -1;
+  const dy = Math.max(30, Math.abs(a.y2-a.y1)*0.5) * sy;
+  return `M ${a.x1} ${a.y1} C ${a.x1} ${a.y1+dy}, ${a.x2} ${a.y2-dy}, ${a.x2} ${a.y2}`;
+}
+
+let pathSeq = 0;
+function drawEdge(layerE, layerP, nodes, e, viewKey){
+  const a = nodes[e.f], b = nodes[e.t];
+  if (!a || !b) return;
+  const an = anchors(a, b, e.a);
+  const d = pathFor(an);
+  const id = `pp_${viewKey}_${pathSeq++}`;
+  const cross = e.k === "cross";
+  const cls = cross ? "sig" : e.k;
+  const p = el("path", {
+    id, class:"edge " + cls, d,
+    "marker-end": `url(#arw-${cross ? "sig" : (e.k === "pii" ? "pii" : e.k === "loop" ? "loop" : e.k === "sig" ? "sig" : "ctl")})`,
+    "data-from": e.f, "data-to": e.t
+  }, layerE);
+  if (cross) p.setAttribute("stroke", `url(#grad-cross)`);
+
+  if (e.lbl){
+    const vertical = an.dir === "v";
+    let lx = (an.x1 + an.x2)/2;
+    let ly = (an.y1 + an.y2)/2 + (vertical ? 4 : (an.dir === "bb" ? 46 : -9));
+    if (!vertical && an.dir !== "bb"){
+      try {
+        const L = p.getTotalLength();
+        if (L > 0){ const pt = p.getPointAtLength(L * 0.5); lx = pt.x; ly = pt.y - 9; }
+      } catch (err) {}
+    }
+    const tx = el("text", {class:"edge-label", x: vertical ? lx + 34 : lx, y:ly,
+      "text-anchor": vertical ? "start" : "middle"}, layerE);
+    tx.textContent = e.lbl;
+  }
+
+  if (e.k !== "ctl"){
+    const dur = (2.6 + Math.random()*1.6).toFixed(2) + "s";
+    const c = el("circle", {class:"pkt", r:3.4, fill: cross ? "var(--pii)" : (e.k === "pii" ? "var(--pii)" : e.k === "loop" ? "var(--violet)" : "var(--sig)")}, layerP);
+    const am = el("animateMotion", {dur, repeatCount:"indefinite", begin:(Math.random()*2).toFixed(2)+"s", rotate:"auto"}, c);
+    const mp = el("mpath", {}, am);
+    mp.setAttributeNS("http://www.w3.org/1999/xlink", "href", "#"+id);
+    mp.setAttribute("href", "#"+id);
+    if (cross){
+      el("animate", {attributeName:"fill", values:"#FF8C42;#FF8C42;#4FE0C0;#4FE0C0",
+        keyTimes:"0;0.44;0.56;1", dur, repeatCount:"indefinite"}, c);
+      el("animate", {attributeName:"r", values:"4.2;4.2;2.6;2.6", keyTimes:"0;0.44;0.56;1", dur, repeatCount:"indefinite"}, c);
+    }
+  }
+}
+
+function defs(svg){
+  const d = el("defs", {}, svg);
+  [["pii","#FF8C42"],["sig","#4FE0C0"],["ctl","#4E7284"],["loop","#9F8BF5"]].forEach(([k,c])=>{
+    const m = el("marker", {id:"arw-"+k, viewBox:"0 0 10 10", refX:"9", refY:"5",
+      markerWidth:"7", markerHeight:"7", orient:"auto-start-reverse"}, d);
+    el("path", {d:"M 0 0 L 10 5 L 0 10 z", fill:c, opacity:".9"}, m);
+  });
+  const g = el("linearGradient", {id:"grad-cross", x1:"0", y1:"0", x2:"1", y2:"0"}, d);
+  el("stop", {offset:"0%", "stop-color":"#FF8C42"}, g);
+  el("stop", {offset:"46%", "stop-color":"#FF8C42"}, g);
+  el("stop", {offset:"58%", "stop-color":"#4FE0C0"}, g);
+  el("stop", {offset:"100%", "stop-color":"#4FE0C0"}, g);
+  return d;
+}
+
+/* ---------------- architecture view ---------------- */
+const ARCH_W = 1980, ARCH_H = 1260;
+const nodeIndex = {};
+function buildArch(){
+  const svg = document.getElementById("svg-arch");
+  svg.setAttribute("viewBox", `0 0 ${ARCH_W} ${ARCH_H}`);
+  defs(svg);
+  const world = el("g", {id:"arch-world"}, svg);
+  const gBands = el("g", {}, world);
+  const gGroups = el("g", {}, world);
+  const gEdges = el("g", {}, world);
+  const gNodes = el("g", {}, world);
+  const gPkts = el("g", {}, world);
+  const gOver = el("g", {}, world);
+
+  // bands
+  const bands = [
+    {id:"R", x:26, y:64, w:1930, h:466, label:"Research plane · Semester 1", note:"offline · measured · the paper's evidence"},
+    {id:"A", x:26, y:636, w:1930, h:572, label:"Runtime plane · Semester 2", note:"in-stream · engineered · the deployed system"}
+  ];
+  bands.forEach(b => {
+    el("rect", {class:"band-frame", x:b.x, y:b.y, width:b.w, height:b.h, rx:16, "data-band":b.id}, gBands);
+    const t = el("text", {class:"band-label", x:b.x+20, y:b.y+26}, gBands); t.textContent = b.label;
+    const n = el("text", {class:"band-note", x:b.x+272, y:b.y+26}, gBands); n.textContent = b.note;
+  });
+
+  // groups inside research band
+  [
+    {x:44, y:118, w:278, h:352, l:"TESTBED"},
+    {x:350, y:118, w:278, h:230, l:"INSTRUMENTATION"},
+    {x:656, y:118, w:278, h:242, l:"COLLECTION"},
+    {x:962, y:118, w:278, h:242, l:"DATASET"},
+    {x:1268, y:118, w:278, h:366, l:"ANALYSIS"},
+    {x:1574, y:118, w:278, h:242, l:"MODEL & BASELINE"}
+  ].forEach(g => {
+    el("rect", {class:"group-frame", x:g.x, y:g.y, width:g.w, height:g.h, rx:12}, gGroups);
+    const t = el("text", {class:"group-label", x:g.x+12, y:g.y-9}, gGroups); t.textContent = g.l;
+  });
+  [
+    {x:656, y:696, w:278, h:426, l:"PRIVACY LAYER · GO PROCESSOR"},
+    {x:1034, y:758, w:278, h:400, l:"MAPPING LAYER"},
+    {x:1340, y:696, w:278, h:506, l:"ANALYTICS & TRIAGE"},
+    {x:1646, y:696, w:278, h:396, l:"ENFORCEMENT"}
+  ].forEach(g => {
+    el("rect", {class:"group-frame", x:g.x, y:g.y, width:g.w, height:g.h, rx:12}, gGroups);
+    const t = el("text", {class:"group-label", x:g.x+12, y:g.y-9}, gGroups); t.textContent = g.l;
+  });
+
+  // the privacy boundary — the one bold element
+  const bx = 985;
+  el("line", {class:"boundary", x1:bx, y1:676, x2:bx, y2:1196}, gOver);
+  const bl = el("text", {class:"boundary-label", x:bx-12, y:1190, "text-anchor":"end"}, gOver);
+  bl.textContent = "PRIVACY BOUNDARY";
+  const bl2 = el("text", {class:"boundary-label", x:bx+12, y:1190}, gOver);
+  bl2.setAttribute("fill", "var(--muted)");
+  bl2.textContent = "nothing unredacted crosses →";
+
+  // research plane counter-note
+  ["Raw traces DO reach disk unredacted here —",
+   "that is the RQ1 measurement, not an oversight."].forEach((ln, i) => {
+    const warn = el("text", {class:"band-note", x:1268, y:492 + i*17, "font-size":"11.6"}, gBands);
+    warn.setAttribute("fill", "var(--pii)");
+    warn.textContent = ln;
+  });
+
+  archNodes.forEach(n => nodeIndex[n.id] = n);
+  archEdges.forEach(e => drawEdge(gEdges, gPkts, nodeIndex, e, "a"));
+  archNodes.forEach(n => drawNode(gNodes, n));
+
+  // legend
+  const lg = el("g", {transform:"translate(40, 1218)"}, world);
+  const items = [
+    ["var(--pii)", "carries payload / unredacted"],
+    ["var(--sig)", "structural + temporal signal only"],
+    ["var(--violet)", "feedback & literature"],
+    ["var(--dim)", "control / configuration"]
+  ];
+  let lx = 0;
+  items.forEach(([c, t]) => {
+    el("rect", {class:"legend-sw", x:lx, y:-9, width:13, height:4, fill:c}, lg);
+    const tx = el("text", {class:"legend-tx", x:lx+20, y:-4}, lg); tx.textContent = t;
+    lx += 26 + t.length*6.4;
+  });
+
+  return svg;
+}
+
+/* ---------------- progress view ---------------- */
+const PROG_W = 1980, PROG_H = 1250;
+function dateX(d, x0, x1, from, to){
+  const t = (d - from) / (to - from);
+  return x0 + Math.max(0, Math.min(1, t)) * (x1 - x0);
+}
+function buildProg(){
+  const svg = document.getElementById("svg-prog");
+  svg.setAttribute("viewBox", `0 0 ${PROG_W} ${PROG_H}`);
+  defs(svg);
+  const world = el("g", {id:"prog-world"}, svg);
+  const gAx = el("g", {}, world), gEdges = el("g", {}, world),
+        gNodes = el("g", {}, world), gPk = el("g", {}, world), gBars = el("g", {}, world);
+
+  const X0 = 90, X1 = 1900, AY = 152;
+  const FROM = new Date(2026,7,15), TO = new Date(2027,4,15);
+
+  const h1 = el("text", {class:"heading", x:40, y:46}, gAx); h1.textContent = "Where the project actually stands";
+  const h2 = el("text", {class:"subheading", x:40, y:68}, gAx);
+  h2.textContent = "Status verified against the committed repository on 2 September 2026, not against the plan.";
+
+  el("line", {class:"axis", x1:X0, y1:AY, x2:X1, y2:AY}, gAx);
+  for (let m = 0; m < 10; m++){
+    const d = new Date(2026, 7+m, 1);
+    if (d > TO) break;
+    const x = dateX(d, X0, X1, FROM, TO);
+    el("line", {class:"tick", x1:x, y1:AY-7, x2:x, y2:AY+7}, gAx);
+    const t = el("text", {class:"tick-label", x:x, y:AY+22, "text-anchor":"middle"}, gAx);
+    t.textContent = d.toLocaleString("en", {month:"short"}) + (d.getMonth() === 0 ? " ’27" : "");
+  }
+  const tx = dateX(TODAY, X0, X1, FROM, TO);
+  el("line", {class:"today", x1:tx, y1:AY-38, x2:tx, y2:462}, gAx);
+  const tl = el("text", {class:"today-label", x:tx+9, y:AY-44}, gAx);
+  tl.textContent = "today — 2 Sep 2026";
+  const tl2 = el("text", {class:"today-label", x:tx+9, y:AY-26}, gAx);
+  tl2.setAttribute("fill", "var(--muted)");
+  tl2.textContent = "M1/M2 infrastructure landed ~6 weeks early";
+
+  const mNodes = {};
+  milestones.forEach((m, i) => {
+    const x = dateX(m.date, X0, X1, FROM, TO);
+    const row = i % 2 === 0 ? 190 : 322;
+    const nx = Math.max(X0-30, Math.min(X1-NW+10, x - NW/2));
+    const node = {
+      id:m.id, x:nx, y:row, w:NW, h:96, status:m.status === "started" ? "partial" : m.status,
+      t:[m.l1, m.l2],
+      s:m.dateStr + " · " + m.pct + "%",
+      tag:statusMeta(m.status).l.toUpperCase(),
+      detail:{
+        what:m.crit,
+        where:m.lead + " · target " + m.dateStr,
+        facts:m.evidence.map(e => "✔ " + e).concat(m.gaps.map(g => "✕ " + g)),
+        pct:m.pct
+      }
+    };
+    mNodes[m.id] = node;
+    el("line", {class:"tick", x1:x, y1:AY+8, x2:x, y2:row, stroke:statusMeta(m.status).c, opacity:".55"}, gAx);
+    el("circle", {cx:x, cy:AY, r:5, fill:statusMeta(m.status).c}, gAx);
+    nodeIndex[m.id] = node;
+  });
+  for (let i = 0; i < milestones.length-1; i++){
+    drawEdge(gEdges, gPk, mNodes, {f:milestones[i].id, t:milestones[i+1].id, k:i < 3 ? "sig" : "ctl"}, "p");
+  }
+  milestones.forEach(m => drawNode(gNodes, mNodes[m.id]));
+
+  // subsystem bars
+  const bh = el("text", {class:"heading", x:40, y:520}, gBars);
+  bh.textContent = "Subsystem completeness";
+  const bs = el("text", {class:"subheading", x:40, y:542}, gBars);
+  bs.textContent = "Estimated from what exists in the repository, not from the Gantt.";
+
+  const colW = 950, barW = 400;
+  subsystems.forEach((s, i) => {
+    const col = i < 8 ? 0 : 1;
+    const row = i % 8;
+    const x = 40 + col*colW, y = 580 + row*46;
+    const t = el("text", {class:"bar-label", x, y:y+11}, gBars); t.textContent = s.n;
+    el("rect", {class:"bar-track", x:x+330, y:y, width:barW, height:14, rx:5}, gBars);
+    el("rect", {class:"bar-fill", x:x+330, y:y, width:Math.max(3, barW*s.p/100), height:14, rx:5,
+      fill:statusMeta(s.s).c, opacity:".82"}, gBars);
+    const pc = el("text", {class:"bar-pct", x:x+330+barW+12, y:y+11}, gBars); pc.textContent = s.p + "%";
+  });
+
+  // blockers
+  const kh = el("text", {class:"heading", x:40, y:1000}, gBars);
+  kh.textContent = "What is actually blocking";
+  blockers.forEach((b, i) => {
+    const x = 40 + (i % 3) * 636, y = 1024 + Math.floor(i/3) * 96;
+    const n = {id:"blk"+i, x, y, w:588, h:80, status:b.s, t:[b.t], s:b.k, tag:"",
+      detail:{what:b.d, where:"Derived from the repository and the four documents", facts:[]}};
+    nodeIndex[n.id] = n;
+    drawNode(gBars, n);
+  });
+  return svg;
+}
+
+/* ---------------- publication view ---------------- */
+const PUB_W = 1980, PUB_H = 1470;
+function buildPub(){
+  const svg = document.getElementById("svg-pub");
+  svg.setAttribute("viewBox", `0 0 ${PUB_W} ${PUB_H}`);
+  defs(svg);
+  const world = el("g", {id:"pub-world"}, svg);
+  const gAx = el("g", {}, world), gE = el("g", {}, world),
+        gN = el("g", {}, world), gP = el("g", {}, world);
+
+  const h1 = el("text", {class:"heading", x:60, y:54}, gAx);
+  h1.textContent = "Publication runway";
+  const h2 = el("text", {class:"subheading", x:60, y:76}, gAx);
+  h2.textContent = "Sequenced against the SDP milestones — never submit an empirical claim before the data backing it exists.";
+
+  // deadline axis
+  const X0 = 110, X1 = 1900, AY = 250;
+  const FROM = new Date(2026,7,10), TO = new Date(2027,4,10);
+  el("line", {class:"axis", x1:X0, y1:AY, x2:X1, y2:AY}, gAx);
+  for (let m = 0; m < 10; m++){
+    const d = new Date(2026, 7+m, 1);
+    if (d > TO) break;
+    const x = dateX(d, X0, X1, FROM, TO);
+    el("line", {class:"tick", x1:x, y1:AY-6, x2:x, y2:AY+6}, gAx);
+    const t = el("text", {class:"tick-label", x:x, y:AY+22, "text-anchor":"middle"}, gAx);
+    t.textContent = d.toLocaleString("en", {month:"short"}) + (d.getMonth() === 0 ? " ’27" : "");
+  }
+  const tx = dateX(TODAY, X0, X1, FROM, TO);
+  el("line", {class:"today", x1:tx, y1:AY-46, x2:tx, y2:AY+30}, gAx);
+  const tl = el("text", {class:"today-label", x:tx+9, y:AY-52}, gAx);
+  tl.textContent = "2 Sep 2026";
+
+  const dated = venues.filter(v => v.deadline).sort((a,b) => a.deadline - b.deadline);
+  dated.forEach((v, i) => {
+    const x = dateX(v.deadline, X0, X1, FROM, TO);
+    const passed = v.deadline < TODAY;
+    const c = passed ? "var(--alarm)" : (v.id === "popets" ? "var(--sig)" : "var(--gold)");
+    const lvl = [-84, 82, -128, 126][i % 4];
+    const up = lvl < 0;
+    const ey = AY + lvl;
+    el("line", {x1:x, y1:up ? AY-6 : AY+6, x2:x, y2:ey + (up ? 26 : -8), stroke:c, "stroke-width":1.2, opacity:".7"}, gAx);
+    el("circle", {cx:x, cy:AY, r:4.5, fill:c}, gAx);
+    const lab = el("text", {class:"dl-label", x:x, y:ey+ (up ? 18 : 0), "text-anchor":"middle",
+      "font-size":"12.4", fill:c,
+      "text-decoration": passed ? "line-through" : "none"}, gAx);
+    lab.textContent = v.name;
+    const d2 = el("text", {class:"dl-label", x:x, y:ey + (up ? 34 : 16), "text-anchor":"middle",
+      "font-size":"10.8", fill:"var(--dim)"}, gAx);
+    d2.textContent = passed ? "closed" : v.deadline.toLocaleDateString("en-GB", {day:"numeric", month:"short"});
+  });
+
+  // decision flow
+  const fh = el("text", {class:"heading", x:60, y:448}, gAx);
+  fh.textContent = "Sequence";
+  const fs = el("text", {class:"subheading", x:60, y:470}, gAx);
+  fs.textContent = "One venue at a time. If rejected, drop to the next tier — never parallel-submit the same manuscript.";
+
+  const fmap = {};
+  const fx = [60, 460, 860, 860, 1260];
+  const fy = [508, 508, 508, 620, 564];
+  pubFlow.forEach((f, i) => {
+    const n = {id:f.id, x:fx[i], y:fy[i], w:330, h:86, status:f.status, t:f.t, s:f.s, tag:f.tag, detail:f.detail};
+    fmap[f.id] = n; nodeIndex[f.id] = n;
+  });
+  [{f:"f1",t:"f2",k:"sig"},{f:"f2",t:"f3",k:"sig"},{f:"f2",t:"f4",k:"ctl"},
+   {f:"f3",t:"f5",k:"sig"},{f:"f4",t:"f5",k:"ctl"}].forEach(e => drawEdge(gE, gP, fmap, e, "u"));
+  pubFlow.forEach(f => drawNode(gN, fmap[f.id]));
+
+  // constraint callout
+  const cx = 1640, cy = 508;
+  el("rect", {class:"group-frame", x:cx, y:cy, width:300, height:200, rx:12,
+    stroke:"var(--alarm)", "stroke-dasharray":"6 5", fill:"rgba(255,95,109,.05)"}, gN);
+  const c1 = el("text", {x:cx+18, y:cy+32, class:"n-title", fill:"var(--alarm)"}, gN);
+  c1.textContent = "Single-submission rule";
+  ["A manuscript may sit at exactly one","venue at a time. The workshop paper","(architecture only) and the journal","paper (full empirical) are different","scopes, so those two do not conflict.","PoPETs and Computers & Security","are sequential, never parallel."].forEach((ln, i) => {
+    const t = el("text", {x:cx+18, y:cy+60+i*20, "font-size":"12.4", fill:"#B9D3DD"}, gN);
+    t.textContent = ln;
+  });
+
+  // venue columns
+  const cols = [
+    {tier:1, x:60,   title:"Tier 1 — journals", note:"no travel required · rolling"},
+    {tier:2, x:540,  title:"Tier 2 — remote-friendly conferences", note:"confirmed hybrid or online-author track"},
+    {tier:3, x:1020, title:"Tier 3 — open deadlines", note:"remote policy unconfirmed — ask after acceptance"},
+    {tier:4, x:1500, title:"Watchlist — 2027 calls", note:"strong topical fit, deadlines already passed"}
+  ];
+  cols.forEach(c => {
+    const t = el("text", {class:"heading", x:c.x, y:786, "font-size":"14.5"}, gN);
+    t.textContent = c.title;
+    const s = el("text", {class:"subheading", x:c.x, y:806, "font-size":"11.4"}, gN);
+    s.textContent = c.note;
+    const list = venues.filter(v => v.tier === c.tier);
+    list.forEach((v, i) => {
+      const y = 836 + i*86;
+      const passed = v.deadline && v.deadline < TODAY;
+      const st = passed ? "gap"
+        : v.id === "popets" ? "done"
+        : !v.costOk ? "partial"
+        : c.tier === 4 ? "planned" : (c.tier === 1 ? "done" : "partial");
+      const n = {id:"v_"+v.id, x:c.x, y, w:420, h:72, status:st,
+        t:[v.name], s:v.dl + " · " + v.cost, tag:passed ? "CLOSED" : v.fit.toUpperCase(),
+        venue:v,
+        detail:{
+          what:v.full,
+          where:v.dl + " · cost to author: " + v.cost + " · travel: " + v.travel,
+          facts:v.detail, url:v.url
+        }};
+      nodeIndex[n.id] = n;
+      const g = drawNode(gN, n);
+      g.setAttribute("data-venue", v.id);
+      g.setAttribute("data-cost", v.costOk ? "free" : "paid");
+      g.setAttribute("data-travel", v.travelOk ? "ok" : "unknown");
+      g.setAttribute("data-open", (!v.deadline || v.deadline >= TODAY) ? "open" : "closed");
+    });
+  });
+  return svg;
+}
+
+/* =====================================================================
+   INSPECTOR
+   ===================================================================== */
+
+function select(n){
+  document.querySelectorAll(".node.sel").forEach(e => e.classList.remove("sel"));
+  const g = document.querySelector(`.node[data-id="${n.id}"]`);
+  if (g) g.classList.add("sel");
+  state.sel = n.id;
+  renderInspector(n);
+}
+
+function renderInspector(n){
+  const d = n.detail || {};
+  const sm = statusMeta(n.status);
+  let html = "";
+  html += `<h2>${(n.t || []).join(" ")}</h2>`;
+  if (d.where) html += `<div class="i-kicker">${d.where}</div>`;
+  html += `<div class="i-status" style="color:${sm.c}"><i></i>${sm.l}${n.tag && n.tag !== sm.l.toUpperCase() ? " · " + n.tag : ""}</div>`;
+  if (d.what) html += `<p>${d.what}</p>`;
+  if (typeof d.pct === "number"){
+    html += `<div class="metric"><span>Completion</span><span>${d.pct}%</span></div>`;
+  }
+  if (n.note) html += `<div class="metric"><span>Flag</span><span style="color:var(--alarm)">${n.note}</span></div>`;
+  if (d.facts && d.facts.length){
+    html += `<div class="lab">DETAIL</div><ul>`;
+    d.facts.forEach(f => html += `<li>${f}</li>`);
+    html += `</ul>`;
+  }
+  if (d.url) html += `<div class="lab">LINK</div><p><a href="${d.url}" target="_blank" rel="noopener">${d.url.replace(/^https?:\/\//,"")}</a></p>`;
+  inspector.innerHTML = html;
+  inspector.scrollTop = 0;
+}
+
+function clearInspector(view){
+  const copy = {
+    arch: `<h2>Architecture</h2>
+      <p>Two planes. The upper one is the offline research pipeline that produced the Semester 1 evidence — it is real, it has run, and its numbers are measurable today. The lower one is the in-stream system Semester 2 builds.</p>
+      <p>The red membrane is the design's whole argument: upstream of it telemetry still carries headers, tokens and IP addresses; downstream nothing but topology and timing survives. Watch a packet cross it — the payload turns into a keyed token.</p>
+      <div class="lab">MEASURED ON THE COMMITTED DATASET</div>
+      <div class="metric"><span>Traces harvested</span><span>500</span></div>
+      <div class="metric"><span>Spans parsed</span><span>3,852</span></div>
+      <div class="metric"><span>Parent→child edges</span><span>2,758</span></div>
+      <div class="metric"><span>Attributes flagged sensitive</span><span>11,345</span></div>
+      <div class="metric"><span>IPv4 addresses exposed</span><span>3,179</span></div>
+      <div class="metric"><span>Distinct service nodes</span><span>5 (3 unresolved)</span></div>
+      <p class="empty" style="margin-top:18px">Click any box for what it is, where it lives in the repository, and what is missing from it.</p>`,
+    prog: `<h2>Progress</h2>
+      <p>The Gantt says M1 completes 15 October and M2 completes 15 November. Both were substantially built before September, so the schedule has roughly six weeks of slack in it right now.</p>
+      <p>That slack is worth spending immediately, because the honest picture is that infrastructure is ahead and evidence is behind: there is a 500-trace dataset with no labels, and a model with no temporal layer to train on them.</p>
+      <div class="lab">READING THIS VIEW</div>
+      <ul>
+        <li><b>Teal</b> — verified complete against the repository</li>
+        <li><b>Amber</b> — partially built, something specific is missing</li>
+        <li><b>Red</b> — a gap that blocks something downstream</li>
+        <li><b>Grey</b> — not started, and not yet due</li>
+      </ul>
+      <p class="empty">Click a milestone for its success criteria, the evidence that supports its status, and what is still open.</p>`,
+    pub: `<h2>Publication</h2>
+      <p>The shortlist is ordered by what a Master's application actually needs — a real, indexed publication — and filtered to options that cost nothing and require no travel.</p>
+      <p>Two deadlines have already gone: NordSec closed 27 August and ARTMAN closed 31 August. SECITC closes in five days. AIDC and WAITI are the two workshop routes still open, and both accept an architecture-only paper that needs no M3 data.</p>
+      <div class="lab">THE SHORT VERSION</div>
+      <ul>
+        <li><b>Now</b> — architecture paper to AIDC (25 Sep) or WAITI (5 Oct)</li>
+        <li><b>30 Nov 2026</b> — PoPETs Issue 3, only if M3 compresses to mid-November</li>
+        <li><b>28 Feb 2027</b> — PoPETs Issue 4, the realistic version of the same submission</li>
+        <li><b>After 30 Apr 2027</b> — full system paper to Computers & Security or IEEE TDSC via the $0 subscription route</li>
+      </ul>
+      <p class="empty">Click a venue for its true cost, deadline and travel policy.</p>`
+  };
+  inspector.innerHTML = copy[view];
+}
+
+/* =====================================================================
+   INTERACTION — pan / zoom / tabs / toolbars
+   ===================================================================== */
+
+const cams = {};
+function setupCamera(key, svg, W, H){
+  const cam = {x:0, y:0, k:1, W, H, svg};
+  cams[key] = cam;
+  const apply = () => svg.setAttribute("viewBox", `${cam.x} ${cam.y} ${cam.W/cam.k} ${cam.H/cam.k}`);
+  cam.apply = apply;
+  cam.fitAll = () => { cam.k = 1; cam.x = 0; cam.y = 0; cam.H = H; apply(); };
+  cam.fitTo = (x, y, w, h) => {
+    const r = svg.getBoundingClientRect();
+    const ar = r.width / Math.max(1, r.height);
+    let vw = w, vh = h;
+    if (vw / vh < ar) vw = vh * ar; else vh = vw / ar;
+    cam.k = W / vw;
+    cam.x = x - (vw - w)/2;
+    cam.y = y - (vh - h)/2;
+    cam.H = vh * cam.k;
+    apply();
+  };
+  cam.reset = () => { cam.k = 1; cam.x = 0; cam.y = 0; cam.H = H; apply(); };
+  cam.fitWidth = () => {
+    const r = svg.getBoundingClientRect();
+    const ar = (r.width || 1200) / Math.max(1, r.height || 700);
+    cam.k = 1; cam.x = 0; cam.y = 0; cam.H = Math.min(H, W / ar); apply();
+  };
+
+  let drag = null;
+  svg.addEventListener("pointerdown", e => {
+    if (e.target.closest(".node")) return;
+    drag = {x:e.clientX, y:e.clientY, cx:cam.x, cy:cam.y};
+    svg.classList.add("dragging");
+    svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const r = svg.getBoundingClientRect();
+    const sx = (cam.W/cam.k) / r.width, sy = (cam.H/cam.k) / r.height;
+    cam.x = drag.cx - (e.clientX - drag.x) * sx;
+    cam.y = drag.cy - (e.clientY - drag.y) * sy;
+    apply();
+  });
+  const stop = e => { drag = null; svg.classList.remove("dragging"); };
+  svg.addEventListener("pointerup", stop);
+  svg.addEventListener("pointercancel", stop);
+  svg.addEventListener("wheel", e => {
+    e.preventDefault();
+    const r = svg.getBoundingClientRect();
+    const mx = (e.clientX - r.left) / r.width, my = (e.clientY - r.top) / r.height;
+    const wx = cam.x + mx * cam.W/cam.k, wy = cam.y + my * cam.H/cam.k;
+    const f = e.deltaY < 0 ? 1.14 : 1/1.14;
+    cam.k = Math.max(0.42, Math.min(4.5, cam.k * f));
+    cam.x = wx - mx * cam.W/cam.k;
+    cam.y = wy - my * cam.H/cam.k;
+    apply();
+  }, {passive:false});
+  svg.addEventListener("click", e => {
+    if (e.target.closest(".node")) return;
+    document.querySelectorAll(".node.sel").forEach(n => n.classList.remove("sel"));
+    state.sel = null;
+    clearInspector(currentView);
+  });
+  return cam;
+}
+
+const TOOLBARS = {
+  arch: [
+    {id:"plane-both", label:"Both planes", group:"plane", on:true},
+    {id:"plane-R", label:"Research only", group:"plane"},
+    {id:"plane-A", label:"Runtime only", group:"plane"},
+    {sep:true},
+    {id:"flow", label:"Data flow", toggle:true, on:true},
+    {id:"motion", label:"Motion", toggle:true, on:true}
+  ],
+  prog: [
+    {id:"motion", label:"Motion", toggle:true, on:true}
+  ],
+  pub: [
+    {id:"f-all", label:"All venues", group:"filter", on:true},
+    {id:"f-free", label:"$0 only", group:"filter"},
+    {id:"f-open", label:"Deadline still open", group:"filter"},
+    {sep:true},
+    {id:"motion", label:"Motion", toggle:true, on:true}
+  ]
+};
+
+function buildToolbar(view){
+  const bar = document.getElementById("tools");
+  bar.innerHTML = "";
+  TOOLBARS[view].forEach(spec => {
+    if (spec.sep){
+      const s = document.createElement("span");
+      s.style.cssText = "width:1px;height:20px;background:var(--stroke);margin:0 2px";
+      bar.appendChild(s);
+      return;
+    }
+    const b = document.createElement("button");
+    b.className = "chip" + (spec.id === "flow" ? " warn" : "");
+    b.textContent = spec.label;
+    b.dataset.id = spec.id;
+    b.setAttribute("aria-pressed", spec.on ? "true" : "false");
+    if (spec.id === "motion") b.setAttribute("aria-pressed", state.motion ? "true" : "false");
+    if (spec.id === "flow") b.setAttribute("aria-pressed", state.flow ? "true" : "false");
+    b.addEventListener("click", () => {
+      if (spec.group){
+        bar.querySelectorAll(`.chip`).forEach(o => {
+          const os = TOOLBARS[view].find(x => x.id === o.dataset.id);
+          if (os && os.group === spec.group) o.setAttribute("aria-pressed", "false");
+        });
+        b.setAttribute("aria-pressed", "true");
+        if (spec.group === "plane") setPlane(spec.id.replace("plane-",""));
+        if (spec.group === "filter") setFilter(spec.id.replace("f-",""));
+      } else {
+        const now = b.getAttribute("aria-pressed") !== "true";
+        b.setAttribute("aria-pressed", now ? "true" : "false");
+        if (spec.id === "motion") setMotion(now);
+        if (spec.id === "flow") setFlow(now);
+      }
+    });
+    bar.appendChild(b);
+  });
+}
+
+function setMotion(on){
+  state.motion = on;
+  document.body.classList.toggle("reduced", !on);
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("animate", on));
+}
+function setFlow(on){
+  state.flow = on;
+  document.querySelectorAll("#svg-arch .pkt").forEach(p => p.style.display = on ? "" : "none");
+  document.querySelectorAll("#svg-arch .edge").forEach(p => p.style.opacity = on ? "" : ".22");
+}
+function setPlane(p){
+  state.plane = p;
+  const svg = document.getElementById("svg-arch");
+  archNodes.forEach(n => {
+    const g = svg.querySelector(`.node[data-id="${n.id}"]`);
+    if (!g) return;
+    g.classList.toggle("faded", p !== "both" && n.plane !== p);
+  });
+  svg.querySelectorAll(".edge").forEach(e => {
+    const a = nodeIndex[e.dataset.from], b = nodeIndex[e.dataset.to];
+    const vis = p === "both" || (a && b && (a.plane === p || b.plane === p));
+    e.classList.toggle("dimmed", !vis);
+  });
+  const cam = cams.arch;
+  if (p === "R") cam.fitTo(10, 40, 1960, 500);
+  else if (p === "A") cam.fitTo(10, 630, 1960, 600);
+  else cam.fitWidth();
+}
+function setFilter(f){
+  state.filter = f;
+  const svg = document.getElementById("svg-pub");
+  svg.querySelectorAll("[data-venue]").forEach(g => {
+    let show = true;
+    if (f === "free") show = g.dataset.cost === "free";
+    if (f === "open") show = g.dataset.open === "open";
+    g.classList.toggle("faded", !show);
+  });
+}
+
+/* ---------------- boot ---------------- */
+const svgA = buildArch();
+const svgP = buildProg();
+const svgU = buildPub();
+setupCamera("arch", svgA, ARCH_W, ARCH_H);
+setupCamera("prog", svgP, PROG_W, PROG_H);
+setupCamera("pub", svgU, PUB_W, PUB_H);
+
+document.querySelectorAll("nav button").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll("nav button").forEach(o => o.setAttribute("aria-selected", "false"));
+    b.setAttribute("aria-selected", "true");
+    currentView = b.dataset.view;
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.getElementById("view-" + currentView).classList.add("active");
+    buildToolbar(currentView);
+    clearInspector(currentView);
+    document.querySelectorAll(".node.sel").forEach(n => n.classList.remove("sel"));
+    cams[currentView].fitWidth();
+    document.getElementById("hint").textContent =
+      currentView === "arch" ? "Click any box for detail · drag to pan · scroll to zoom"
+      : currentView === "prog" ? "Click a milestone or a blocker for the evidence behind it"
+      : "Click a venue for its true cost, deadline and travel policy";
+  });
+});
+
+["zin","zout","zfit"].forEach(id => {
+  document.getElementById(id).addEventListener("click", () => {
+    const cam = cams[currentView];
+    if (id === "zfit"){ cam.fitAll ? cam.fitAll() : cam.reset(); return; }
+    cam.k = Math.max(0.42, Math.min(4.5, cam.k * (id === "zin" ? 1.22 : 1/1.22)));
+    cam.apply();
+  });
+});
+
+const reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+setMotion(!reduced);
+buildToolbar("arch");
+clearInspector("arch");
+requestAnimationFrame(() => { Object.values(cams).forEach(c => c.fitWidth()); });
+window.addEventListener("resize", () => { if (cams[currentView]) cams[currentView].fitWidth(); });
+</script>
+</body>
+</html>
