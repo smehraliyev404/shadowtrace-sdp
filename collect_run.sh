@@ -13,7 +13,10 @@ cd "$(dirname "$0")"
 RUN_ID="${1:?usage: collect_run.sh <run_id> [--normal] [--bursts N] [--normal-min M]}"
 shift || true
 
-MODE="attack"; BURSTS=7; NORMAL_MIN=12; VUS=50; ATTACKS_OVERRIDE=""   # 7 bursts = one of each attack
+# VUS=35 (rebalanced pass): lighter normal load lifts attack's raw *share* to ~43%
+# without a dangerous absolute attack rate -- normal still stays the 57% majority.
+MODE="attack"; BURSTS=7; NORMAL_MIN=12; VUS=35; ATTACKS_OVERRIDE=""   # 7 bursts = one of each attack
+GAP_RANGE=""; DURATIONS=""   # forwarded to the orchestrator when set
 while [ $# -gt 0 ]; do
   case "$1" in
     --normal)     MODE="normal" ;;
@@ -21,6 +24,8 @@ while [ $# -gt 0 ]; do
     --normal-min) NORMAL_MIN="$2"; shift ;;
     --vus)        VUS="$2"; shift ;;
     --attacks)    ATTACKS_OVERRIDE="$2"; shift ;;   # e.g. "lateral_movement" to redo just one attack
+    --gap-range)  GAP_RANGE="$2 $3"; shift 2 ;;      # e.g. --gap-range 100 130
+    --durations)  DURATIONS="$2"; shift ;;           # e.g. "http_flood=120,slow_brute=260"
     *) echo "[collect] unknown arg: $1"; exit 2 ;;
   esac
   shift
@@ -75,7 +80,9 @@ else
   # orchestrator blocks till it's done and writes data/runs/<run_id>.json
   # (started_at / ended_at / attack_bursts is where the labels come from)
   $PY scripts/orchestrator.py --run-id "$RUN_ID" --attacks $ATTACKS \
-      --bursts "$BURSTS" --i-have-normal-traffic
+      --bursts "$BURSTS" --i-have-normal-traffic \
+      ${GAP_RANGE:+--gap-range $GAP_RANGE} \
+      ${DURATIONS:+--durations "$DURATIONS"}
 
   kill $K6_PID 2>/dev/null || true; trap - EXIT
   sleep 10  # flush

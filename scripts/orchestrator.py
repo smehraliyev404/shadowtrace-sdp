@@ -23,17 +23,42 @@ MIN_BURST_SECONDS = 90
 MIN_GAP_SECONDS = 75        
 DEFAULT_GAP_RANGE = (75, 120)
 
-# These are all 8 attacks used throughout all the runs 
+# These are all 8 attacks used throughout all the runs.
+#
+# Rebalanced pass -> target ~43% raw attack / 57% normal. IMPORTANT health note:
+# authservice/login makes a downstream GET to frontend on every attempt, so the
+# brute family is NOT free — it drives a full frontend fan-out (currency, reco,
+# ad...), the same fragile services that crashed the cluster last time. So NO
+# attack path is cheap. We reach 43% share safely by (a) running normal traffic
+# lighter (VUS~35, see collect_run.sh) so attack's *share* rises without a
+# dangerous absolute rate, and (b) distributing the rate across services with the
+# frontend-heavy attacks CAPPED:
+#   * http_flood CAPPED at ~15/s (pause 0.20) — it was the 107-restart crasher.
+#   * brute_force / session_rotation held to ~28/s (c6, pause 0.21) — each hits the
+#     frontend fan-out via authservice, so not pushed higher.
+#   * sqli_probe ~30/s (pause 0.033) — lighter product-page fan-out.
+#   * exfiltration ~24/s (pause 0.20) — catalog sweep + setCurrency.
+#   * lateral_movement ~12/s (sleep 0.2 in lateral.py) — SAFEST volume: direct
+#     gRPC, bypasses the frontend fan-out entirely; given more burst *time* too.
+#   * slow_brute stays slow by design (interval 2.0s, ~0.5/s).
+# run_01 is a calibration checkpoint: if any 5xx or currency/payment restarts
+# appear, back these rates down and re-run.
 ATTACKS = {
-    "http_flood":             "{python} {root}/scripts/attacks/http_flood.py --duration {duration}",
-    "exfiltration":           "{python} {root}/scripts/attacks/exfiltration.py --duration {duration}",
-    "brute_force":            "{python} {root}/scripts/attacks/brute_force.py --duration {duration}",
-    "sqli_probe":             "{python} {root}/scripts/attacks/sqli_probe.py --duration {duration}",
+    "http_flood":             "{python} {root}/scripts/attacks/http_flood.py --duration {duration} --concurrency 4 --pause 0.18",
+    "exfiltration":           "{python} {root}/scripts/attacks/exfiltration.py --duration {duration} --pause 0.13",
+    "brute_force":            "{python} {root}/scripts/attacks/brute_force.py --duration {duration} --concurrency 6 --pause 0.21",
+    "sqli_probe":             "{python} {root}/scripts/attacks/sqli_probe.py --duration {duration} --pause 0.022",
     "ssrf_probe":             "{python} {root}/scripts/attacks/ssrf_probe.py --duration {duration}",
     "lateral_movement":       "{python} {root}/scripts/attacks/lateral_movement.py --duration {duration}",
-    "session_rotation_brute": "{python} {root}/scripts/attacks/session_rotation_brute.py --duration {duration}",
-    "slow_brute":             "{python} {root}/scripts/attacks/slow_brute.py --duration {duration}",
+    "session_rotation_brute": "{python} {root}/scripts/attacks/session_rotation_brute.py --duration {duration} --concurrency 6 --pause 0.21",
+    "slow_brute":             "{python} {root}/scripts/attacks/slow_brute.py --duration {duration} --interval 2.0",
 }
+
+# Per-attack burst-duration overrides (seconds), set via --durations on the CLI.
+# Lets one mixed run give each attack its own burst length (rare attacks longer)
+# instead of a single random burst-range for every attack. Empty = fall back to
+# the random --burst-range. Populated by main() from --durations.
+PER_ATTACK_DURATION = {}
 
 
 def run_burst(attack_type, duration, dry_run):
@@ -95,8 +120,13 @@ def orchestrate(run_id, attacks, n_bursts, burst_range, gap_range, dry_run, seed
 
     bursts = []
     for i in range(n_bursts):
-        attack_type = draw_attack()          
-        duration = random.randint(lo, hi)   
+        attack_type = draw_attack()
+        # per-attack fixed duration if given (rare attacks get longer bursts),
+        # else a random length inside the shared burst-range.
+        if attack_type in PER_ATTACK_DURATION:
+            duration = PER_ATTACK_DURATION[attack_type]
+        else:
+            duration = random.randint(lo, hi)
         s, e = run_burst(attack_type, duration, dry_run)
         bursts.append({"attack_type": attack_type,
                        "start_ts": round(s, 3), "end_ts": round(e, 3)})
@@ -148,6 +178,10 @@ def main():
                    metavar=("MIN", "MAX"), help="burst length range (seconds)")
     p.add_argument("--gap-range", type=int, nargs=2, default=list(DEFAULT_GAP_RANGE),
                    metavar=("MIN", "MAX"), help="gap between bursts (seconds)")
+    p.add_argument("--durations", default="",
+                   help="per-attack fixed burst lengths, e.g. "
+                        "'http_flood=120,slow_brute=260'. Attacks not listed use "
+                        "the random --burst-range.")
     p.add_argument("--seed", type=int, help="RNG seed for reproducible schedules")
     p.add_argument("--dry-run", action="store_true",
                    help="substitute 'sleep' for the attack (attack scripts not built yet)")
@@ -158,6 +192,17 @@ def main():
     unknown = [a for a in args.attacks if a not in ATTACKS]
     if unknown:
         p.error(f"unknown attack types {unknown}; available: {sorted(ATTACKS)}")
+
+    # parse --durations 'name=sec,...' into the per-attack override table
+    for pair in filter(None, (s.strip() for s in args.durations.split(","))):
+        name, _, secs = pair.partition("=")
+        name = name.strip()
+        if name not in ATTACKS:
+            p.error(f"--durations names unknown attack '{name}'; available: {sorted(ATTACKS)}")
+        try:
+            PER_ATTACK_DURATION[name] = int(secs)
+        except ValueError:
+            p.error(f"--durations value for '{name}' is not an int: {secs!r}")
 
     if not args.dry_run and not args.i_have_normal_traffic:
         p.error("refusing to run: attacks must overlap normal traffic. Start "
