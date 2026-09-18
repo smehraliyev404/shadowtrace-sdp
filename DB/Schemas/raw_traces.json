@@ -2,7 +2,7 @@
   "_id": "ObjectId",
   "trace_id": "String",
   "trial_id": "String",
-  "attack_type": "normal | http_flood | brute_force | sqli | ssrf | exfiltration",
+  "attack_type": "normal | http_flood | exfiltration | brute_force | sqli_probe | ssrf_probe | lateral_movement | session_rotation_brute | slow_brute",
   "captured_at": "ISODate",
   "source_ref": "String or null (path/identifier of the original raw JSON file - used instead of embedding trace_payload at bulk scale)",
   "trace_payload": "Object or null (only embedded for retention_class=long_term_attack; bulk normal traces reference source_ref instead)",

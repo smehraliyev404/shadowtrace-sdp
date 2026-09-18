@@ -27,6 +27,10 @@
 # statistics, useful for sanity checks and class-balance bookkeeping, not the
 # final training features.
 #
+# Re-running ingest on the same run is safe: graphs.trace_id and
+# raw_traces.trace_id both have unique indexes (created by setup_database.py),
+# so traces already in MongoDB are skipped rather than duplicated.
+#
 # Usage:
 #   python ingest_traces.py --run-id run_04 --split train
 #   python ingest_traces.py --run-id run_01 --split test      # a --normal run
@@ -44,6 +48,8 @@ import sys
 from collections import Counter
 from datetime import datetime, timezone
 from uuid import uuid4
+
+from pymongo.errors import DuplicateKeyError
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
@@ -206,11 +212,18 @@ def run(run_id, split_assignment, sample_size, delete_after):
 
     trial_id = run_id  # one collect_run.sh run = one trial: same cluster state, same time bracket
     database = get_database()
+    if "unique_trace_id" not in database.graphs.index_information():
+        raise RuntimeError(
+            "graphs has no unique trace_id index, so re-running ingest would insert "
+            "duplicate graphs - run `python DB/setup_database.py` first"
+        )
 
     label_counts = Counter()
     normal_kept = 0
     graphs_inserted = 0
+    graphs_existing = 0
     raw_docs_inserted = 0
+    raw_docs_existing = 0
     skipped = 0
     to_delete = []
     captured_ats = []
@@ -241,14 +254,18 @@ def run(run_id, split_assignment, sample_size, delete_after):
         captured_ats.append(captured_at)
         raw_doc = build_raw_trace_doc(path, trial_id, label, captured_at)
 
-        database.graphs.insert_one(graph_doc)
-        graphs_inserted += 1
+        try:
+            database.graphs.insert_one(graph_doc)
+            graphs_inserted += 1
+        except DuplicateKeyError:
+            graphs_existing += 1  # already ingested by an earlier run of this script
 
         try:
             database.raw_traces.insert_one(raw_doc)
             raw_docs_inserted += 1
+        except DuplicateKeyError:
+            raw_docs_existing += 1
         except Exception as e:
-            # Most likely a duplicate trace_id from a previous ingestion run.
             print(f"[!] raw_traces insert skipped for {path}: {e}")
 
         if raw_doc["retention_class"] == "temporary":
@@ -281,8 +298,9 @@ def run(run_id, split_assignment, sample_size, delete_after):
     print("\n" + "=" * 60)
     print("[+] INGESTION COMPLETE")
     print(f"    trial_id: {trial_id}")
-    print(f"    graphs inserted: {graphs_inserted}  (by label: {dict(label_counts)})")
-    print(f"    raw_traces tracking docs inserted: {raw_docs_inserted}")
+    print(f"    traces processed, by label: {dict(label_counts)}")
+    print(f"    graphs inserted: {graphs_inserted}  (already present: {graphs_existing})")
+    print(f"    raw_traces tracking docs inserted: {raw_docs_inserted}  (already present: {raw_docs_existing})")
     print(f"    skipped (unparseable / empty): {skipped}")
     print(f"    'normal' traces kept: {normal_kept}" + (f" (capped at {sample_size})" if sample_size > 0 else " (no cap)"))
     print("=" * 60)

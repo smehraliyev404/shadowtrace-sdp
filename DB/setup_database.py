@@ -1,13 +1,13 @@
 # ShadowTrace: MongoDB collection setup - validators + indexes
 #
 # Covers the 4 collections needed for the current phase (building the
-# labelled training dataset for the ST-GNN): raw_traces (ingestion staging),
-# trials (experiment/train-test metadata), graphs (the actual training
-# data), model_versions (retraining history). The other 4 collections in
-# the User Design ERD - redaction_policies, feature_windows, alerts,
-# policy_actions - belong to the Semester 2 runtime pipeline and aren't
-# created yet; their shapes are still defined in DB/Schemas/ for when that
-# work starts.
+# labelled training dataset for the ST-GNN): raw_traces (ingestion staging -
+# not part of the User Design ERD), trials (experiment/train-test metadata),
+# graphs (the actual training data), model_versions (retraining history).
+# The other 5 collections in the User Design ERD - redaction_policies,
+# feature_windows, alerts, policy_actions, privacy_audits - belong to the
+# Semester 2 runtime pipeline and aren't created yet; their shapes are still
+# defined in DB/Schemas/ for when that work starts.
 
 from datetime import datetime, timedelta, timezone
 
@@ -188,6 +188,34 @@ def ensure_collection(database, name, validator):
         print(f"Updated {name} validation rules")
 
 
+def ensure_unique_graph_trace_index(database):
+    """graphs.trace_id must be unique so re-running ingest_traces.py can't insert
+    a trace's graph twice. It used to carry a non-unique "trace_lookup" index; a
+    unique index on the same key can't coexist with it, so swap it - but only
+    after checking for duplicates, which would make the unique index unbuildable."""
+    graphs = database.graphs
+    if "trace_lookup" in graphs.index_information():
+        duplicate = next(
+            graphs.aggregate(
+                [
+                    {"$group": {"_id": "$trace_id", "n": {"$sum": 1}}},
+                    {"$match": {"n": {"$gt": 1}}},
+                    {"$limit": 1},
+                ],
+                allowDiskUse=True,
+            ),
+            None,
+        )
+        if duplicate:
+            raise RuntimeError(
+                f"graphs already has duplicate trace_id values (e.g. {duplicate['_id']}); "
+                "remove the duplicates, then re-run, so trace_id can be made unique"
+            )
+        graphs.drop_index("trace_lookup")
+        print("Replaced non-unique graphs.trace_lookup with a unique trace_id index")
+    graphs.create_index([("trace_id", ASCENDING)], unique=True, name="unique_trace_id")
+
+
 def main():
     database = get_database()
 
@@ -207,7 +235,7 @@ def main():
     database.trials.create_index([("trial_id", ASCENDING)], unique=True, name="unique_trial_id")
     database.trials.create_index([("split_assignment", ASCENDING)], name="split_lookup")
 
-    database.graphs.create_index([("trace_id", ASCENDING)], name="trace_lookup")
+    ensure_unique_graph_trace_index(database)
     database.graphs.create_index([("trial_id", ASCENDING)], name="trial_lookup")
     database.graphs.create_index([("label", ASCENDING)], name="label_lookup")
 

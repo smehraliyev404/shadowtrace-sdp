@@ -1,7 +1,8 @@
 {
   "_id": "ObjectId",
   "trial_id": "String",
-  "attack_type": "normal | http_flood | brute_force | sqli | ssrf | exfiltration",
+  "attack_type": "normal | mixed | http_flood | exfiltration | brute_force | sqli_probe | ssrf_probe | lateral_movement | session_rotation_brute | slow_brute (mixed = a run whose bursts include several different attack types)",
+  "attack_types_present": ["String (every distinct attack type that actually fired during this trial)"],
   "platform": "String",
   "feature_condition": "String",
   "started_at": "ISODate",
