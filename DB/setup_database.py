@@ -24,7 +24,19 @@ from mongo_client import get_database
 #   measured against, so it is retained indefinitely: expires_at = None,
 #   and the TTL index below simply skips documents where that field is null.
 NORMAL_RETENTION_DAYS = 7
-ATTACK_TYPES = {"http_flood", "brute_force", "sqli", "ssrf", "exfiltration"}
+# Matches the 8 scripts in scripts/attacks/ exactly (see orchestrator.py's
+# ATTACKS dict) - these are the literal strings that land in a run's burst
+# log and therefore in every attack-labeled trace/graph document.
+ATTACK_TYPES = {
+    "http_flood",
+    "exfiltration",
+    "brute_force",
+    "sqli_probe",
+    "ssrf_probe",
+    "lateral_movement",
+    "session_rotation_brute",
+    "slow_brute",
+}
 
 
 def compute_retention(attack_type: str, captured_at: datetime):
@@ -50,9 +62,7 @@ raw_trace_validator = {
         "properties": {
             "trace_id": {"bsonType": "string"},
             "trial_id": {"bsonType": "string"},
-            "attack_type": {
-                "enum": ["normal", "http_flood", "brute_force", "sqli", "ssrf", "exfiltration"]
-            },
+            "attack_type": {"enum": ["normal", *sorted(ATTACK_TYPES)]},
             "captured_at": {"bsonType": "date"},
             "source_ref": {
                 "bsonType": ["string", "null"],
@@ -75,8 +85,16 @@ trial_validator = {
         "required": ["trial_id", "attack_type", "started_at", "split_assignment"],
         "properties": {
             "trial_id": {"bsonType": "string"},
-            "attack_type": {
-                "enum": ["normal", "http_flood", "brute_force", "sqli", "ssrf", "exfiltration"]
+            # A single collect_run.sh run mixes normal traffic with several
+            # different attack bursts, so a trial's attack_type is "normal"
+            # (no bursts fired), one specific type (a single-attack run, e.g.
+            # --attacks "ssrf_probe"), or "mixed" (the default balanced run of
+            # several attacks) - see attack_types_present for the full list.
+            "attack_type": {"enum": ["normal", "mixed", *sorted(ATTACK_TYPES)]},
+            "attack_types_present": {
+                "bsonType": "array",
+                "items": {"enum": sorted(ATTACK_TYPES)},
+                "description": "Every distinct attack type that actually fired during this trial.",
             },
             "platform": {"bsonType": "string"},
             "feature_condition": {"bsonType": "string"},

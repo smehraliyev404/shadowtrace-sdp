@@ -54,16 +54,44 @@ labelled dataset the ST-GNN trains on) only needs 4:
 The deferred four aren't deleted or redesigned - their schemas already
 exist in `DB/Schemas/` for when the runtime pipeline work starts.
 
-## 3. Retention policy (GDPR Art. 5(1)(e) - storage limitation)
+## 3. How a run's traces get their label
 
-The team currently has ~400k harvested trace files (~30GB), all `normal`
-traffic (no attack k6 scripts exist yet). That volume can't and shouldn't
-live in MongoDB - Atlas's free tier caps at 512MB, and even self-hosting
-30GB of raw payload just to throw most of it away later defeats the
+`collect_run.sh` / `scripts/orchestrator.py` fire attack bursts **on top of
+live normal traffic**, so one run's trace folder
+(`data/raw_traces/<run_id>/`) is a mix of normal and (usually) several
+different attack types, not one label per folder. The ground truth lives in
+`data/runs/<run_id>.json` - the burst log - as a list of
+`{attack_type, start_ts, end_ts}` windows in unix seconds.
+
+`DB/ingest_traces.py --run-id <run_id>` reads that burst log once, then for
+every trace in the run checks whether its start time falls inside one of
+those windows: inside -> that burst's `attack_type`; outside every window
+(or no burst log at all, i.e. a `--normal`-mode run) -> `"normal"`. The
+label is decided **per trace**, not per folder or per run.
+
+Because a run can contain several distinct attack types, a `trials` document
+now also carries `attack_types_present` (every type that actually fired)
+alongside `attack_type`, which is `"normal"` (no bursts), the one specific
+type (a single-attack run, e.g. `--attacks "ssrf_probe"`), or `"mixed"` (the
+default balanced run of several attacks).
+
+The 8 valid attack labels, matching `scripts/attacks/` and
+`scripts/orchestrator.py::ATTACKS` exactly: `http_flood`, `exfiltration`,
+`brute_force`, `sqli_probe`, `ssrf_probe`, `lateral_movement`,
+`session_rotation_brute`, `slow_brute`.
+
+## 4. Retention policy (GDPR Art. 5(1)(e) - storage limitation)
+
+Even a single balanced run generates far more `normal` traces than attack
+ones (normal traffic is deliberately the bulk of every run - see
+`k6_test/normal_traffic.js` - so attacks stay rare and buried rather than
+dominating the traffic mix). That volume can't and shouldn't live in
+MongoDB wholesale - Atlas's free tier caps at 512MB, and even self-hosting
+that much raw payload just to throw most of it away later defeats the
 project's own minimization argument.
 
 The rule, implemented in `DB/setup_database.py::compute_retention` and
-applied by `DB/ingest_traces.py`:
+applied by `DB/ingest_traces.py` **per trace**, not per run:
 
 - **`normal` traces** -> `retention_class = "temporary"`, no payload
   embedded in Mongo (only a `source_ref` pointing at the original file),
@@ -76,27 +104,22 @@ applied by `DB/ingest_traces.py`:
   service names, latencies, counts, no payload), the raw JSON has served
   its purpose and both the source file and the Mongo tracking record are
   safe to delete.
-- **Any attack class** (`http_flood`, `brute_force`, `sqli`, `ssrf`,
-  `exfiltration`) -> `retention_class = "long_term_attack"`,
+- **Any of the 8 attack types** -> `retention_class = "long_term_attack"`,
   `expires_at = null`. The TTL index ignores documents where `expires_at`
   is null, so these are never auto-deleted. The full raw payload IS
   embedded for these, since attack traces are the rare, evidentiary class
   the whole thesis is measured against - they're the labelled benchmark
   dataset itself, not disposable intermediate data.
 
-Because only `normal` traffic exists today, this design front-loads the
-harder rule (long-term retention for something rare and important) so it's
-already correct the moment the five k6 attack scripts start producing
-labelled data.
+## 5. Downsampling within a run
 
-## 4. Downsampling the 400k-trace backlog
-
-400k largely-identical benign shopping-flow traces provide little
-additional training signal over the first several thousand - and matching
-that dataset into Mongo directly would still overflow the free tier even
-after stripping payloads. `ingest_traces.py` therefore takes a fixed-seed
-random sample (default 5,000, override with `--sample-size`) of `normal`
-traces per ingestion run, while always ingesting **100%** of any
-attack-class batch (never downsample the minority class you're trying to
-detect). This also produces a more usable, less imbalanced dataset for
-training than hoarding every trace ever harvested.
+A single run can still contain tens of thousands of `normal` traces (a
+30-50 minute run at 50+ VUs adds up fast), which provide diminishing
+training signal past the first few thousand and would overflow the free
+tier if all kept. `ingest_traces.py` takes a fixed-seed random sample
+(default 5,000 per run, override with `--sample-size`, `0` = no cap) of
+that run's `normal` traces, while always ingesting **100%** of every
+attack-labeled trace regardless of count (never downsample the minority
+classes you're trying to detect). Skipped-by-sampling files are left
+untouched on disk - only `--delete-after` removes files that were actually
+parsed and stored.

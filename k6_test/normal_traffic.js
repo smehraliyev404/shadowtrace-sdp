@@ -2,13 +2,29 @@ import http from 'k6/http';
 import { check, sleep, group } from 'k6';
 
 const BASE = __ENV.BASE_URL || 'http://localhost:8080';
+// stub authservice. ~15% of sessions do a real login so the auth->frontend edge
+// has a normal baseline for brute force to spike above (else it only shows up
+// under attack, and the model could catch it from structure alone).
+const AUTH = __ENV.AUTH_URL || 'http://localhost:8081';
 
 export const options = {
-  vus: 5,
-  duration: '2m',
+  // 50 shoppers - normal traffic must be the bulk (~70-80%) so attacks stay rare
+  // and buried, else the model just learns to over-flag everything.
+  vus: __ENV.VUS ? parseInt(__ENV.VUS) : 50,
+  duration: __ENV.DURATION || '10m',
 };
 
 export default function () {
+  // 0. Every so often a real login (~15%) to give the auth->frontend edge a baseline
+  if (Math.random() < 0.15) {
+    group('login', function () {
+      const res = http.post(`${AUTH}/login`,
+        { username: 'shopper', password: 'correct-horse' });
+      check(res, { 'login handled': (r) => r.status === 401 || r.status === 200 });
+    });
+    sleep(Math.random() * 1 + 0.5);
+  }
+
   // 1. Browse Homepage
   group('browse homepage', function () {
     const res = http.get(`${BASE}/`);
@@ -16,7 +32,7 @@ export default function () {
     console.log(`homepage → ${res.status}`);
   });
 
-  sleep(Math.random() * 3 + 2); // 2-5s human think-time jitter
+  sleep(Math.random() * 1.5 + 1); // ~1-2.5s
 
   // 2. View Product Details
   group('view product', function () {
@@ -25,7 +41,7 @@ export default function () {
     console.log(`product → ${res.status}`);
   });
 
-  sleep(Math.random() * 4 + 3); // 3-7s jitter
+  sleep(Math.random() * 2 + 1.5); // ~1.5-3.5s
 
   // 3. Add to Cart
   group('add to cart', function () {
@@ -37,7 +53,7 @@ export default function () {
     console.log(`add to cart → ${res.status}`);
   });
 
-  sleep(Math.random() * 3 + 2);
+  sleep(Math.random() * 1.5 + 1);
 
   // 4. View Cart
   group('view cart', function () {
@@ -46,7 +62,7 @@ export default function () {
     console.log(`cart → ${res.status}`);
   });
 
-  sleep(Math.random() * 3 + 2);
+  sleep(Math.random() * 1.5 + 1);
 
   // 5. Checkout with Dynamic PII & Valid Test Credit Card
   group('checkout', function () {
@@ -85,5 +101,5 @@ export default function () {
     console.log(`checkout (${dynamicEmail}) → ${res.status}`);
   });
 
-  sleep(Math.random() * 5 + 5);
+  sleep(Math.random() * 2 + 2);
 }
