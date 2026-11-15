@@ -1,7 +1,14 @@
 services:
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    # Pinned (was :latest) so every run uses the same Jaeger. v1.76.0 = the image
+    # we have been running; it has the in-memory --memory.max-traces cap.
+    image: jaegertracing/all-in-one:1.76.0
     container_name: shadowtrace-jaeger
+    # Trace cap (PLAN.md Phase 2): bounded memory instead of unbounded growth.
+    # When full, Jaeger silently evicts the OLDEST traces, so the harvester fails
+    # the run if it gets near this number (harvest_traces.py --jaeger-cap).
+    # Keep JAEGER_MAX_TRACES identical here and in the harvester's environment.
+    command: ["--memory.max-traces=${JAEGER_MAX_TRACES:-500000}"]
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     ports:
@@ -9,7 +16,10 @@ services:
       - "4317:4317"   # OTLP gRPC
       - "4318:4318"   # OTLP HTTP
 
+  # Not used in the current collection: services export straight to Jaeger.
+  # Kept for the planned in-Collector redaction processor (`--profile spring`).
   otel-collector:
+    profiles: ["spring"]
     image: otel/opentelemetry-collector-contrib:latest
     container_name: shadowtrace-collector
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
@@ -26,13 +36,14 @@ services:
   # script picks Atlas automatically once MONGO_URI is set in .env, and
   # falls back to this local container otherwise.
   mongodb:
+    profiles: ["spring"]
     image: mongo:8.0
     container_name: shadowtrace-mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-}
     ports:
       - "27017:27017"
     volumes:
