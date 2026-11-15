@@ -1,6 +1,18 @@
-# So this part is Jaeger which is basically fetching all spans and as a result of a run turns them into traces which are the stored in our data folder.
+"""Harvest one run's traces from Jaeger into data/raw_traces/<run_id>/.
+
+Jaeger is queried in time slices for every service that can start a trace. The
+harvester stops the run instead of warning when data could be missing, so a run
+is never silently incomplete:
+  * a slice query returns `limit` traces (more may exist)       -> exit 3
+  * Jaeger cannot be queried for a slice (after 3 tries)         -> exit 4
+  * traces in this run approach Jaeger's --memory.max-traces cap,
+    so Jaeger may already have evicted the oldest ones           -> exit 5
+On failure <run>.harvest.json gets "status": "failed" and the reason, and
+collect_run.sh stops. The raw files written so far are kept for inspection.
+"""
 
 import os
+import sys
 import json
 import time
 import argparse
@@ -15,10 +27,23 @@ RUNS_DIR = os.getenv("RUNS_DIR", "data/runs")
 # Jaeger traces itself, those spans aren't part of the Boutique call graph
 EXCLUDED_SERVICES = {"jaeger-all-in-one", "jaeger-query", "jaeger-collector"}
 
-# every service that can root a trace, not just frontend - the attacker pod and
-# authservice root traces that never touch frontend (a frontend-only query missed
-# the lateral ones).
-DEFAULT_ROOT_SERVICES = ["frontend", "attacker", "authservice", "ssrfservice"]
+# Every service that can start a trace. Jaeger's service query only returns
+# traces that contain that service: the attacker pod and authservice start traces
+# that never touch the frontend, and lateral movement from inside
+# recommendationservice produces traces with none of the other four.
+DEFAULT_ROOT_SERVICES = ["frontend", "attacker", "authservice", "ssrfservice",
+                         "recommendationservice"]
+
+# must equal the cap Jaeger runs with (docker-compose.yml, --memory.max-traces)
+DEFAULT_JAEGER_CAP = int(os.getenv("JAEGER_MAX_TRACES", "500000"))
+CAP_SAFETY = 0.9   # fail at 90% of the cap: health-check traces of services we do
+                   # not query also count against it, so the true fill is higher
+
+
+class HarvestError(Exception):
+    def __init__(self, code, reason):
+        super().__init__(reason)
+        self.code, self.reason = code, reason
 
 
 def ensure_directory_exists(directory_path):
@@ -35,16 +60,19 @@ def fetch_traces(service, start_us, end_us, limit):
         "end": int(end_us),
         "limit": int(limit),
     }
-    try:
-        response = requests.get(url, params=params, timeout=30)
-    except requests.exceptions.RequestException as e:
-        print(f"[!] Error connecting to Jaeger at {url}: {e}")
-        return []
-
-    if response.status_code != 200:
-        print(f"[!] Jaeger returned {response.status_code} for service '{service}'")
-        return []
-    return response.json().get("data") or []
+    last = None
+    for attempt in range(3):
+        try:
+            response = requests.get(url, params=params, timeout=60)
+            if response.status_code == 200:
+                return response.json().get("data") or []
+            last = f"HTTP {response.status_code}"
+        except (requests.exceptions.RequestException, ValueError) as e:
+            last = str(e)[:200]
+        time.sleep(2 * (attempt + 1))
+    # an empty answer here would look like "no traffic" - fail instead
+    raise HarvestError(4, f"Jaeger query failed for service '{service}' "
+                          f"[{start_us}, {end_us}]: {last}")
 
 
 def trace_start_us(trace):
@@ -71,7 +99,8 @@ def save_trace(trace, output_dir):
 
 # Here we provide an amount of time and other parameters for Jaeger to store traces and then send them to not overload the system.
 def harvest_run(run_id, start_ts, end_ts, services=None, limit=5000,
-                chunk_seconds=30, raw_dir=RAW_TRACES_DIR, runs_dir=RUNS_DIR):
+                chunk_seconds=30, raw_dir=RAW_TRACES_DIR, runs_dir=RUNS_DIR,
+                jaeger_cap=DEFAULT_JAEGER_CAP):
     services = services or DEFAULT_ROOT_SERVICES
     start_us = start_ts * 1_000_000  
     end_us = end_ts * 1_000_000
@@ -86,37 +115,60 @@ def harvest_run(run_id, start_ts, end_ts, services=None, limit=5000,
 
     saved, spans_saved, seen = 0, 0, set()
     dropped_bounds, dropped_excluded = 0, 0
+    max_slice = {"traces": 0, "service": None, "slice": None}
+    status, failure = "ok", None
 
     slice_start = start_us
     step = int(chunk_seconds * 1_000_000)
-    while slice_start < end_us:
-        slice_end = min(slice_start + step, end_us)
-        for service in services:
-            traces = fetch_traces(service, slice_start, slice_end, limit)
-            if len(traces) >= limit:
-                print(f"    [!] slice {(slice_start-start_us)/1e6:.0f}-{(slice_end-start_us)/1e6:.0f}s "
-                      f"service '{service}' hit the {limit} cap -- shrink --chunk-seconds")
-            for trace in traces:
-                trace_id = trace.get("traceID")
-                if not trace_id or trace_id in seen:  
-                    continue
-                t_start = trace_start_us(trace)
-                if not (start_us <= t_start <= end_us):
-                    dropped_bounds += 1
-                    continue
-                if trace_services(trace) & EXCLUDED_SERVICES:
-                    dropped_excluded += 1
-                    continue
-                seen.add(trace_id)
-                spans_saved += save_trace(trace, output_dir)
-                saved += 1
-        slice_start = slice_end
+    try:
+        while slice_start < end_us:
+            slice_end = min(slice_start + step, end_us)
+            rel = f"{(slice_start-start_us)/1e6:.0f}-{(slice_end-start_us)/1e6:.0f}s"
+            for service in services:
+                traces = fetch_traces(service, slice_start, slice_end, limit)
+                if len(traces) > max_slice["traces"]:
+                    max_slice = {"traces": len(traces), "service": service, "slice": rel}
+                if len(traces) >= limit:
+                    # Jaeger stops at `limit`; anything beyond it in this slice is lost
+                    raise HarvestError(3, f"slice {rel} service '{service}' returned {len(traces)} "
+                                          f"traces = --limit {limit}; traces may be missing. "
+                                          f"Raise --limit or shrink --chunk-seconds and re-harvest.")
+                for trace in traces:
+                    trace_id = trace.get("traceID")
+                    if not trace_id or trace_id in seen:  
+                        continue
+                    t_start = trace_start_us(trace)
+                    if not (start_us <= t_start <= end_us):
+                        dropped_bounds += 1
+                        continue
+                    if trace_services(trace) & EXCLUDED_SERVICES:
+                        dropped_excluded += 1
+                        continue
+                    seen.add(trace_id)
+                    spans_saved += save_trace(trace, output_dir)
+                    saved += 1
+            slice_start = slice_end
+
+        in_jaeger = saved + dropped_bounds + dropped_excluded
+        if jaeger_cap and in_jaeger >= CAP_SAFETY * jaeger_cap:
+            raise HarvestError(5, f"{in_jaeger} traces seen vs Jaeger cap {jaeger_cap} "
+                                  f"(>= {CAP_SAFETY:.0%}); Jaeger may have evicted the oldest "
+                                  f"traces of this run. Raise JAEGER_MAX_TRACES or shorten runs.")
+    except HarvestError as e:
+        status, failure = "failed", {"code": e.code, "reason": e.reason}
+        print(f"\n[✗] HARVEST FAILED: {e.reason}")
 
     print(f"[*] harvested across {((end_us - start_us) / step):.0f} slices, "
           f"{len(services)} services each.")
 
     manifest = {
         "run_id": run_id,
+        "status": status,
+        "failure": failure,
+        "limit_per_slice": limit,
+        "chunk_seconds": chunk_seconds,
+        "fullest_slice": max_slice,
+        "jaeger_cap": jaeger_cap,
         "started_at": start_ts,
         "ended_at": end_ts,
         "harvested_at": datetime.now(timezone.utc).isoformat(),
@@ -154,6 +206,9 @@ def main():
                              "Every service that can root a trace must be listed.")
     parser.add_argument("--limit", type=int, default=5000,
                         help="Max traces per time slice (default: 5000)")
+    parser.add_argument("--jaeger-cap", type=int, default=DEFAULT_JAEGER_CAP,
+                        help="Jaeger --memory.max-traces (default $JAEGER_MAX_TRACES or "
+                             f"{DEFAULT_JAEGER_CAP}); 0 disables the eviction check")
     parser.add_argument("--chunk-seconds", type=int, default=30,
                         help="Harvest in slices this many seconds wide (default: 30). "
                              "Smaller slices avoid a high-volume burst crowding out others.")
@@ -170,8 +225,11 @@ def main():
     if end_ts <= start_ts:
         parser.error("--end must be after --start")
 
-    harvest_run(args.run_id, start_ts, end_ts, services=args.services,
-                limit=args.limit, chunk_seconds=args.chunk_seconds)
+    m = harvest_run(args.run_id, start_ts, end_ts, services=args.services,
+                    limit=args.limit, chunk_seconds=args.chunk_seconds,
+                    jaeger_cap=args.jaeger_cap)
+    if m["status"] != "ok":
+        sys.exit(m["failure"]["code"])
 
 
 if __name__ == "__main__":
