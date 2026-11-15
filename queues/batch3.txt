@@ -1,0 +1,84 @@
+# Batch 3 = batch 2's plan (same seeds, sampler v2) with the RQ1 leak channels on
+# (frontend headers/query/body/enduser.id, checkout/email/auth attributes, Redis keys,
+# k6 checkout query). Batch 2 was stopped on 14 Nov after its first run because its
+# traces had almost no personal data. ~77 h. Run with:
+#   ./venv/bin/python scripts/run_queue.py queues/batch3.txt; pkill -f "kubectl port-forward"; docker compose stop jaeger; minikube stop
+
+a3_01 201
+n3_01 301 --normal
+a3_02 202
+n3_02 302 --normal
+a3_03 203
+n3_03 303 --normal
+a3_04 204
+h3_01 901 --held-out
+a3_05 205
+n3_04 304 --normal
+a3_06 206
+n3_05 305 --normal
+a3_07 207
+hn3_01 911 --held-out --normal
+n3_06 306 --normal
+a3_08 208
+a3_09 209
+n3_07 307 --normal
+a3_10 210
+n3_08 308 --normal
+a3_11 211
+n3_09 309 --normal
+a3_12 212
+h3_02 902 --held-out
+a3_13 213
+n3_10 310 --normal
+a3_14 214
+n3_11 311 --normal
+a3_15 215
+n3_12 312 --normal
+a3_16 216
+a3_17 217
+n3_13 313 --normal
+a3_18 218
+n3_14 314 --normal
+a3_19 219
+n3_15 315 --normal
+a3_20 220
+h3_03 903 --held-out
+hn3_02 912 --held-out --normal
+a3_21 221
+n3_16 316 --normal
+a3_22 222
+n3_17 317 --normal
+a3_23 223
+n3_18 318 --normal
+a3_24 224
+a3_25 225
+n3_19 319 --normal
+a3_26 226
+n3_20 320 --normal
+a3_27 227
+n3_21 321 --normal
+a3_28 228
+h3_04 904 --held-out
+a3_29 229
+n3_22 322 --normal
+a3_30 230
+n3_23 323 --normal
+a3_31 231
+n3_24 324 --normal
+a3_32 232
+a3_33 233
+n3_25 325 --normal
+hn3_03 913 --held-out --normal
+a3_34 234
+n3_26 326 --normal
+a3_35 235
+n3_27 327 --normal
+a3_36 236
+h3_05 905 --held-out
+a3_37 237
+n3_28 328 --normal
+a3_38 238
+n3_29 329 --normal
+a3_39 239
+n3_30 330 --normal
+a3_40 240

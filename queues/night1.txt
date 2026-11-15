@@ -1,0 +1,13 @@
+# Night 1 (PLAN.md §5, §14 Phase 4): 8 training runs + 1 held-out run.
+# One burst of each of the 8 attacks per run (sampler default), 30-40 min each,
+# ~6-6.5 h with the 10-min warm-up. Run with:
+#   ./venv/bin/python scripts/run_queue.py queues/night1.txt
+run_01 101
+run_02 102
+run_03 103
+run_04 104
+run_05 105
+run_06 106
+run_07 107
+run_08 108
+run_09 909 --held-out

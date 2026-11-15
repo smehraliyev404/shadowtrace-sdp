@@ -1,0 +1,5 @@
+# Phase 4 dry run (~35 min): checks the queue itself in the lab - preflight,
+# 10-min warm-up, two short runs (attack + normal), gates, report - and that it
+# survives logging out. Test runs only (--minutes => manifest test_run=true).
+dry_01 31 --minutes 10 --bursts 3
+dry_02 32 --minutes 8 --normal
