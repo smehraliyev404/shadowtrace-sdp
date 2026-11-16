@@ -26,8 +26,10 @@ Output, data/features/<run>/<level>/:
                    `attrs` (JSON object of the span attributes and log fields,
                    raw at L0, redacted at L1); L2 has no attributes
   traces.parquet   one row per trace: shape, timing, status, pattern, label
-  windows.parquet  one row per window: `edges` and `nodes` (lists of structs),
-                   window features, attack counts, labels per k
+  windows.parquet  one row per window: `edges`, `nodes` and `op_edges` (calls
+                   per parent -> child span "service + operation" pair, for
+                   the Jacob baseline) as lists of structs, window features,
+                   attack counts, labels per k
 
 traces.parquet and the edge features use structure and timing only, so they
 are the same at every level. Each window node also carries six content
@@ -217,11 +219,10 @@ def process(path):
     t = json.load(open(path, encoding="utf-8"))
     tid = norm(t["traceID"])
     root = root_of(t)
-    if is_background(root):
-        return ("background", root[:2])
     o = _ORIGIN.get(tid)
-    if o is None:
-        return ("unmatched", root[:2])
+    if o is None:      # background only among traces no client sent: an origin-labelled
+        # request is kept even if it looks like a health check
+        return ("background" if is_background(root) else "unmatched", root[:2])
 
     procs = t.get("processes") or {}
     spans = []
@@ -242,12 +243,22 @@ def process(path):
     n_roots = len(roots)
     entry = min(roots, key=lambda s: s["start"]) if roots else min(spans, key=lambda s: s["start"])
 
-    # orphan repair: enclosing span of another service, latest start
+    def ancestors(x):
+        seen = set()
+        while x and x["id"] not in seen:
+            seen.add(x["id"])
+            x = by_id.get(x["parent"]) if x["parent"] else None
+        return seen
+
+    # orphan repair: enclosing span of another service, latest start; never a span
+    # below the orphan itself (with tied timestamps a child "encloses" its parent,
+    # and attaching to it would create a parent cycle)
     for s in roots:
         if s is entry:
             continue
         cands = [p for p in spans if p is not s and p["svc"] != s["svc"]
-                 and p["start"] <= s["start"] and p["start"] + p["dur"] >= s["start"] + s["dur"]]
+                 and p["start"] <= s["start"] and p["start"] + p["dur"] >= s["start"] + s["dur"]
+                 and s["id"] not in ancestors(p)]
         if cands:
             best = max(cands, key=lambda p: (p["start"], p["kind"] == "client"))
             s["parent"], s["repaired"] = best["id"], True
@@ -358,6 +369,15 @@ def build_windows(traces, edges, spans_l2, t0):
     est = est.merge(prev.rename(columns={"count": "prev_count"}), on=["window", "src", "dst"], how="left")
     est["prev_count"] = est["prev_count"].fillna(0).astype(int)
     est["d_log_count"] = np.log1p(est["count"]) - np.log1p(est["prev_count"])
+    # RPC pairs (Jacob et al. 2022 nodes, their Table A1): parent span "service + operation" ->
+    # child span "service + operation", within and across services; a root span's parent is "-"
+    o = spans_l2[["trace_id", "span_id", "parent_id", "service", "operation"]].copy()
+    o["dst"] = o["service"] + " + " + o["operation"]
+    par = o[["trace_id", "span_id", "dst"]].rename(columns={"span_id": "parent_id", "dst": "src"})
+    o = o.merge(par, on=["trace_id", "parent_id"], how="left")
+    o["src"] = o["src"].fillna("-")
+    o["window"] = o["trace_id"].map(tw)
+    ost = o.groupby(["window", "src", "dst"]).size().rename("count").reset_index()
 
     s = spans_l2.copy()
     s["window"] = s["trace_id"].map(tw)
@@ -392,6 +412,7 @@ def build_windows(traces, edges, spans_l2, t0):
             row[f"label_k{k}"] = ("excluded" if amb or len(hit) > 1 else hit[0] if hit else "normal")
         row["edges"] = ew.drop(columns=["window"]).to_dict("records")
         row["nodes"] = nw.drop(columns=["window"]).to_dict("records")
+        row["op_edges"] = ost[ost["window"] == w].drop(columns=["window"]).to_dict("records")
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -537,6 +558,7 @@ def build_run(run_id, a, key):
         "labels": labels,
         "origin_lines": len(origin),
         "edges_distinct": sorted({f"{s}->{d}" for s, d in zip(ed["src"], ed["dst"])}),
+        "op_pairs_distinct": len({(x["src"], x["dst"]) for ops in win["op_edges"] for x in ops}),
         "windows": len(win), "windows_complete": int(win["complete"].sum()),
         "window_labels": {f"k{k}": win[f"label_k{k}"].value_counts().to_dict() for k in KS},
         "operation_names_with_personal_data": op_hits,

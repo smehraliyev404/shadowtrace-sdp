@@ -178,12 +178,28 @@ class Redactor:
         self._count("named_removed")
         return f"[{kinds[0]}]" if kinds else "[removed]"
 
+    def _name(self, k):
+        """A parameter name: detectors and the random-token rule apply to names too
+        (an e-mail or a token can be sent as a name, e.g. "?alice@x.com=1")."""
+        text, _ = self._detect(urllib.parse.unquote_plus(k))
+        return self._residual(text)
+
     def _pairs(self, value, sep):
         out = []
         for part in value.split(sep):
             k, eq, v = part.partition("=")
-            out.append(k + eq + (self.scalar(k, urllib.parse.unquote_plus(v)) if eq else self.scalar("", k)))
+            out.append(self._name(k) + eq + (self.scalar(k, urllib.parse.unquote_plus(v)) if eq else self.scalar("", k)))
         return sep.join(out)
+
+    @staticmethod
+    def _is_form(v):
+        """name=value[&...] with real parameter names. A single token that only
+        contains "=" (base64 padding: "dG9r...MTIz=") is not a form: its "name"
+        would be the secret itself."""
+        if not FORM.match(v):
+            return False
+        names = [part.partition("=")[0] for part in v.split("&")]
+        return not any(random_looking(n) or len(n) > 64 for n in names)
 
     def value(self, key, value):
         v = "" if value is None else str(value)
@@ -195,7 +211,9 @@ class Redactor:
             return text
         if header == "cookie":
             return self._pairs(v, "; ")
-        if key in ("url.query", "http.request.body") or FORM.match(v):
+        if PII_NAME.search(header or key) and header != "cookie":
+            return self.scalar(header or key, urllib.parse.unquote_plus(v) if "%" in v else v)
+        if key in ("url.query", "http.request.body") or self._is_form(v):
             return self._pairs(v, "&")
         if "%" in v:
             v = urllib.parse.unquote_plus(v)
