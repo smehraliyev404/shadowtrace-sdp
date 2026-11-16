@@ -71,6 +71,19 @@ scripts/
   phase0_check.py          testbed ground-truth checks before collecting
   synthetic_people.py      usernames and password guesses for the attacks
   attacks/                 the eight attack scripts
+  build_features.py        raw traces -> labelled Parquet per level (L0/L1/L2) in data/features/
+  redact.py                L1 redaction (allow-list, detectors, HMAC tokens)
+  edge_norm.py             edge features, normalised on normal training windows
+  pii_audit.py             L1 recall and precision against the origin pii ground truth
+  make_split.py            fixed run-level split (5 assignments) -> splits/
+ml/
+  data.py                  windows.parquet -> graph sequences and flat vectors
+  models.py                ST-GNN (GATv2 / GCN / SAGE) and flat baselines
+  train.py                 train one model on one assignment and seed -> results/
+  gbm_fit.py               LightGBM in a child process (cannot share one with torch)
+  metrics.py               metrics, block-bootstrap CIs, Wilcoxon + Holm
+  sanity.py                checks to pass before trusting results
+splits/batch3.json         the fixed split of batch 3
 experiments/parallel_runs/ test of whether a second cluster changes latency
 analytics/, DB/, collector/  earlier work (see docs/mongodb.md)
 docs/                      user design, MongoDB setup
@@ -133,6 +146,35 @@ A series of runs:
 The queue checks the cluster before every run, warms it up with uncollected
 traffic, empties the cart store, stops on a failed gate and resumes where it
 stopped. Reports go to `data/queue_reports/`.
+
+## Features
+
+```bash
+./venv/bin/python scripts/build_features.py --run-id a3_01 a3_02     # -> data/features/<run>/{L0,L1,L2}/
+./venv/bin/python scripts/pii_audit.py --run-id a3_01                # L1 recall/precision vs ground truth
+```
+
+Per run and level: `spans.parquet` (structure, timing, status; L0/L1 also the
+attributes, raw or redacted), `traces.parquet` and `windows.parquet` (60 s
+windows: edge and node statistics, six node content features that are 0 at
+L2, labels for k = 1, 3, 5, 10), plus `build_report.json`. Edge statistics are
+raw; `edge_norm.py` normalises them against normal windows of the training
+runs only.
+
+## Models
+
+```bash
+./venv/bin/python scripts/make_split.py                 # once, before any results (already done: splits/batch3.json)
+./venv/bin/python -m ml.sanity --split splits/batch3.json --assignment 0
+./venv/bin/python -m ml.train --model stgnn --split splits/batch3.json --assignment 0 --seed 1 --level L2 --k 3
+./venv/bin/python -m ml.metrics results/*/predictions.parquet --part test --compare stgnn
+```
+
+Models: `stgnn` (GATv2, main), `stgnn_gcn`, `stgnn_sage`, `rf`, `gbm`, `mlp`;
+ablations `--no-seen` and `--no-content`. Every regular run is the test run in
+exactly one of the five assignments; held-out runs are only ever tested on.
+Normalisation and vocabularies are fitted on the training runs of each
+assignment.
 
 ## Gates
 
