@@ -6,7 +6,8 @@
 Every origin line carries `pii`: the personal values that request really sent
 (session id, credentials, checkout values; all synthetic). Per trace:
 
-  exposed    a pii value (or its URL-encoded form) appears in the trace's L0
+  exposed    a pii value (as sent, URL-encoded, or with '+' decoded to a space)
+             appears in the trace's L0
              attributes, i.e. the testbed leaked it into the trace
   recall     share of exposed values that no longer appear in L1, per pii field
   precision  every attribute value that L1 changed is one redaction; it is a
@@ -51,7 +52,13 @@ def flatten(d, prefix=""):
 
 
 def variants(v):
-    return {v, urllib.parse.quote_plus(v), urllib.parse.quote(v, safe="")}
+    """The forms a value can take in span attributes: as sent, URL-encoded, and with
+    '+' turned into a space (Python services decode baggage that way: "a+shop@x"
+    arrives as "a shop@x" in emailservice and recommendationservice spans)."""
+    out = {v, urllib.parse.quote_plus(v), urllib.parse.quote(v, safe="")}
+    if "+" in v:
+        out.add(v.replace("+", " "))
+    return out
 
 
 def l1_kind(key, value):
