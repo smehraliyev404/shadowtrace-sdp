@@ -9,7 +9,8 @@ the edge features in its attention), "gcn", "sage".
 
 Flat baselines on the last window's flat vector: random forest, gradient
 boosting (LightGBM, fitted in a child process by ml/gbm_fit.py, see
-ml/__init__.py) and an MLP (scikit-learn), all class-weighted.
+ml/__init__.py), an MLP and a linear SVM (scikit-learn), all class-weighted and
+tuned by grid search on the validation runs (GRIDS).
 """
 
 import numpy as np
@@ -21,7 +22,49 @@ from torch_geometric.nn import GATv2Conv, GCNConv, SAGEConv, global_max_pool, gl
 from torch_geometric.utils import scatter
 
 ENCODERS = ("gatv2", "gcn", "sage")
-FLAT_MODELS = ("rf", "gbm", "mlp")
+FLAT_MODELS = ("rf", "gbm", "mlp", "svm")
+
+# Flat baselines are tuned like Osswald et al. (PDP 2025, §IV-D, Table VI: grid search,
+# RF and SVM baselines), but on our VALIDATION RUNS instead of random folds of the
+# training data (windows of one run are correlated, so random folds would leak).
+# Their selected settings (RF 100 trees, depth 6; SVM C = 10, L2, tol 1e-4) are in the grids.
+GRIDS = {
+    "rf": {"n_estimators": [100, 300, 500], "max_depth": [6, 12, None]},
+    "svm": {"C": [0.1, 1, 10]},
+    "mlp": {"hidden_layer_sizes": [(64,), (128, 64)], "alpha": [1e-4, 1e-3]},
+    "gbm": {"num_leaves": [15, 31, 63], "n_estimators": [100, 300]},
+}
+DEFAULTS = {"rf": {"n_estimators": 500, "max_depth": None}, "svm": {"C": 1.0},
+            "mlp": {"hidden_layer_sizes": (128, 64), "alpha": 1e-4},
+            "gbm": {"num_leaves": 31, "n_estimators": 300}}
+
+
+class LinearSVM:
+    """Linear SVM (L2 penalty, tol 1e-4, as in Osswald et al.) on standardised
+    features, class-weighted; predict_proba = softmax of the decision values (a
+    monotone score per class, enough for PR-AUC and the attack score)."""
+
+    def __init__(self, C=1.0, seed=0):
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.svm import LinearSVC
+        self.model = make_pipeline(StandardScaler(), LinearSVC(C=C, penalty="l2", tol=1e-4, class_weight="balanced",
+                                                               max_iter=20000, random_state=seed))
+
+    def fit(self, X, y):
+        self.model.fit(X, y)
+        self.classes_ = self.model.classes_
+        return self
+
+    def predict_proba(self, X):
+        d = self.model.decision_function(X)
+        if d.ndim == 1:                              # two classes: one decision value
+            d = np.column_stack([-d, d])
+        e = np.exp(d - d.max(1, keepdims=True))
+        return e / e.sum(1, keepdims=True)
+
+    def predict(self, X):
+        return self.classes_[self.predict_proba(X).argmax(1)]
 
 
 class STGNN(nn.Module):
@@ -76,12 +119,15 @@ def class_weights(y, n_classes):
     return torch.tensor(w, dtype=torch.float32)
 
 
-def make_flat(name, seed):
+def make_flat(name, seed, **params):
+    """A flat baseline with the given settings (DEFAULTS where none are given)."""
+    p = {**DEFAULTS[name], **params}
     if name == "rf":
         from sklearn.ensemble import RandomForestClassifier
-        return RandomForestClassifier(n_estimators=500, class_weight="balanced", n_jobs=-1, random_state=seed)
+        return RandomForestClassifier(class_weight="balanced", n_jobs=-1, random_state=seed, **p)
     if name == "mlp":
         from sklearn.neural_network import MLPClassifier
-        return MLPClassifier(hidden_layer_sizes=(128, 64), early_stopping=False, max_iter=500,
-                             random_state=seed)
-    raise ValueError(name)
+        return MLPClassifier(early_stopping=False, max_iter=500, random_state=seed, **p)
+    if name == "svm":
+        return LinearSVM(C=p["C"], seed=seed)
+    raise ValueError(name)       # gbm runs in its own process (ml/gbm_fit.py)

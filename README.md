@@ -81,6 +81,8 @@ ml/
   models.py                ST-GNN (GATv2 / GCN / SAGE) and flat baselines
   train.py                 train one model on one assignment and seed -> results/
   gbm_fit.py               LightGBM in a child process (cannot share one with torch)
+  jacob.py                 Jacob et al. 2022 baseline: DCRNN forecaster, normal windows only
+  ma.py                    Ma 2026 baseline: one GCN graph per request, scored per window too
   metrics.py               metrics, block-bootstrap CIs, Wilcoxon + Holm
   sanity.py                checks to pass before trusting results
 splits/batch3.json         the fixed split of batch 3
@@ -167,11 +169,21 @@ runs only.
 ./venv/bin/python scripts/make_split.py                 # once, before any results (already done: splits/batch3.json)
 ./venv/bin/python -m ml.sanity --split splits/batch3.json --assignment 0
 ./venv/bin/python -m ml.train --model stgnn --split splits/batch3.json --assignment 0 --seed 1 --level L2 --k 3
+./venv/bin/python -m ml.jacob --split splits/batch3.json --assignment 0 --seed 1 --level L2
+./venv/bin/python -m ml.ma --split splits/batch3.json --assignment 0 --seed 1 --level L1
 ./venv/bin/python -m ml.metrics results/*/predictions.parquet --part test --compare stgnn
 ```
 
-Models: `stgnn` (GATv2, main), `stgnn_gcn`, `stgnn_sage`, `rf`, `gbm`, `mlp`;
-ablations `--no-seen` and `--no-content`. Every regular run is the test run in
+Models: `stgnn` (GATv2, main), `stgnn_gcn`, `stgnn_sage`, and the flat baselines
+`rf`, `gbm`, `mlp`, `svm`, each tuned by grid search on the validation runs
+(`--no-tune` uses fixed defaults);
+ablations `--no-seen` and `--no-content`. Baselines: `ml.jacob` (forecasts
+operation-pair call counts, trained on normal windows only, flags a window when
+the error leaves mean ± 2σ; scored as a detector) and `ml.ma` (classifies each
+request, then turns request predictions into window predictions so all models
+are scored on the same windows). Each result goes to `results/<model>[_<non-default settings>]_<level>_k<k>_a<assignment>_s<seed>/`;
+an existing result is never replaced without `--overwrite`, and `ml.metrics`
+compares models only within one level and k. Every regular run is the test run in
 exactly one of the five assignments; held-out runs are only ever tested on.
 Normalisation and vocabularies are fitted on the training runs of each
 assignment.

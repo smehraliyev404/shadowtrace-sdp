@@ -11,6 +11,15 @@
                 (if not, the model or the input pipeline is broken)
   6. shuffled   trained on shuffled labels, evaluation macro-F1 ~ chance
                 (if not, labels leak through the inputs or the evaluation)
+  7. jacob      the forecaster's training sequences contain normal windows only
+                (SKIP when there are none, e.g. on night-1 runs; batch 3 normal runs have them)
+  8. ma         the per-request GCN fits 64 training traces up to the best accuracy
+                its input allows: traces of different classes can have identical graphs
+                (same services, span counts and text; e.g. a flood request is an ordinary
+                page load), so the limit is the majority-label share per distinct graph
+                (node order ignored, features rounded to 0.01: on run_03 three traces differ
+                only below that and the GCN does not separate them even with standardised
+                inputs, 0.656 vs 0.703 at 4 decimals, tested 17 Nov); PASS within 0.02 of it
 """
 
 import argparse
@@ -22,7 +31,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from ml.data import CLASSES, CONTENT_FEATURES, NODE_FEATURES, PROJECT_ROOT, Prep, build, load_runs
+from ml.data import CLASSES, CONTENT_FEATURES, FEATURES_DIR, NODE_FEATURES, PROJECT_ROOT, Prep, build, load_runs
 from ml.metrics import macro_f1
 from ml.models import STGNN, make_flat
 
@@ -33,8 +42,58 @@ results = []
 
 
 def report(name, ok, detail):
+    if ok is None:
+        print(f"[SKIP] {name}: {detail}")
+        return
     results.append(ok)
     print(f"[{'PASS' if ok else 'FAIL'}] {name}: {detail}")
+
+
+def check_jacob(tw):
+    from ml.jacob import T_IN, build_graph, count_matrix, sequences
+    pairs, _ = build_graph(tw)
+    X = count_matrix(tw, pairs)
+    _, _, rows = sequences(tw, X, T_IN, True)
+    if not len(rows):
+        return None, "no all-normal training sequences in these runs"
+    bad = 0
+    for r in rows:
+        run, w = tw.loc[r, "run_id"], tw.loc[r, "window"]
+        g = tw[(tw["run_id"] == run) & (tw["window"].between(w - T_IN, w))]
+        bad += int((g["label_k1"] != "normal").any())
+    return bad == 0, f"{len(rows)} training sequences over {len(pairs)} operation pairs, {bad} with an attack window"
+
+
+def check_ma(train_runs, level, seed=0, n=64, steps=300):
+    from torch_geometric.data import Batch
+    from ml.ma import Featurizer, MaGCN, load_part, sample_ids
+    ids = sample_ids(train_runs[:1], level, FEATURES_DIR, max(1, n // len(CLASSES)) + 1, seed)
+    tr, tn, te = load_part(train_runs[:1], level, FEATURES_DIR, ids)
+    feat = Featurizer().fit(tn, tn["trace_id"].map(tr.set_index("trace_id")["label"]).to_numpy())
+    gs = feat.graphs(tr, tn, te)
+    keep = [i for i, g in enumerate(gs) if g is not None][:n]
+    b = Batch.from_data_list([gs[i] for i in keep])
+    y = torch.tensor([CLASSES.index(lab) for lab in tr["label"].iloc[keep]])
+    torch.manual_seed(seed)
+    m = MaGCN(feat.dim, len(CLASSES))
+    opt = torch.optim.Adam(m.parameters(), lr=3e-3)
+    for _ in range(steps):
+        m.train()
+        loss = F.cross_entropy(m(b), y)
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+    m.eval()
+    with torch.no_grad():
+        acc = float((m(b).argmax(1) == y).float().mean())
+    import collections
+    sig = collections.defaultdict(collections.Counter)
+    for i, lab in zip(keep, y.tolist()):
+        rows = tuple(sorted(map(tuple, gs[i].x.numpy().round(2).tolist())))    # < 0.01 apart = identical
+        sig[(rows, gs[i].edge_index.shape[1])][lab] += 1
+    limit = sum(c.most_common(1)[0][1] for c in sig.values()) / len(keep)
+    return acc >= limit - 0.02, (f"training accuracy {acc:.3f} on {len(keep)} traces ({level}) after {steps} steps; "
+                                 f"best possible with these inputs {limit:.3f} ({len(sig)} distinct graphs)")
 
 
 def overfit(ds, prep, n=16, steps=300, seed=0):
@@ -126,6 +185,11 @@ def main():
         for lab, out in ((tr.y, rf_real), (perm, rf_shuf)):
             m = make_flat("rf", seed).fit(tr.flat, lab)
             out.append(macro_f1(ev.y, m.predict(ev.flat)))
+    ok_j, msg_j = check_jacob(tw)
+    report("jacob", ok_j, msg_j)
+    ok_m, msg_m = check_ma(train_runs, a.level)
+    report("ma", ok_m, msg_m)
+
     n_cls = len(set(ev.y))
     chance = 1.0 / n_cls
     ok = np.mean(shuf) < np.mean(real) and np.mean(shuf) < chance + 0.25
