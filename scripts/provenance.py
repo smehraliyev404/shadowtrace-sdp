@@ -86,6 +86,19 @@ class OriginLog:
             self._f.close()
 
 
+class Tally(dict):
+    """Request counters shared by attack worker threads; add() holds a lock, so no
+    increment is lost (dict += is only safe by accident of the GIL)."""
+
+    def __init__(self, *keys):
+        super().__init__({k: 0 for k in keys})
+        self._lock = threading.Lock()
+
+    def add(self, key):
+        with self._lock:
+            self[key] += 1
+
+
 class Pacer:
     """Seeded, jittered waits between requests (no fixed sleep, so the
     inter-request timing is not a giveaway). sleep() waits base * (1 +- jitter),

@@ -113,7 +113,7 @@ def harvest_run(run_id, start_ts, end_ts, services=None, limit=5000,
           f"({end_ts - start_ts:.0f}s)")
     print(f"[*] Querying Jaeger services={services} in {chunk_seconds}s slices")
 
-    saved, spans_saved, seen = 0, 0, set()
+    saved, spans_saved, seen, dropped = 0, 0, set(), set()   # dropped: count each trace once
     dropped_bounds, dropped_excluded = 0, 0
     max_slice = {"traces": 0, "service": None, "slice": None}
     status, failure = "ok", None
@@ -135,13 +135,15 @@ def harvest_run(run_id, start_ts, end_ts, services=None, limit=5000,
                                           f"Raise --limit or shrink --chunk-seconds and re-harvest.")
                 for trace in traces:
                     trace_id = trace.get("traceID")
-                    if not trace_id or trace_id in seen:  
+                    if not trace_id or trace_id in seen or trace_id in dropped:
                         continue
                     t_start = trace_start_us(trace)
                     if not (start_us <= t_start <= end_us):
+                        dropped.add(trace_id)
                         dropped_bounds += 1
                         continue
                     if trace_services(trace) & EXCLUDED_SERVICES:
+                        dropped.add(trace_id)
                         dropped_excluded += 1
                         continue
                     seen.add(trace_id)

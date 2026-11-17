@@ -100,7 +100,21 @@ fi
 START=$(date +%s)
 k6 run "${K6_ARGS[@]}" k6_test/normal_traffic.js >"${RUN_DIR}/k6_stdout.log" 2>&1 &
 K6_PID=$!
-trap 'kill $K6_PID 2>/dev/null || true' EXIT
+ORCH_PID=""
+# stop a process and everything it started (the orchestrator starts the attack scripts)
+kill_tree() {
+  local c
+  for c in $(pgrep -P "$1" 2>/dev/null); do kill_tree "$c"; done
+  kill "$1" 2>/dev/null || true
+}
+cleanup() {
+  kill_tree "$K6_PID"
+  [ -n "$ORCH_PID" ] && kill_tree "$ORCH_PID"
+  return 0
+}
+trap cleanup EXIT
+# a stopped run (kill, Ctrl+C, closed terminal) must not leave k6 or attacks running
+trap 'echo "[collect] stopped - ending k6 and the attacks"; exit 143' TERM INT HUP
 sleep 8
 # a k6 that died at start-up (bad manifest path, script error) would go unnoticed
 # in the background and attacks would run with no normal traffic: check it.
@@ -113,8 +127,13 @@ fi
 if [ "$MODE" = "attack" ]; then
   # replays manifest["attacks"]["schedule"]; burst times are offsets from START
   # (k6's start). Writes data/runs/<run_id>.json with planned + actual times.
+  # in the background + wait, so a stop signal is handled at once (bash runs traps
+  # only after a foreground command ends, which here could be an hour)
   $PY scripts/orchestrator.py --run-id "$RUN_ID" --manifest "$MANIFEST" --t0 "$START" \
-      --i-have-normal-traffic
+      --i-have-normal-traffic &
+  ORCH_PID=$!
+  wait "$ORCH_PID"
+  ORCH_PID=""
 fi
 
 echo "[collect] waiting for k6 to finish its manifest duration..."
@@ -142,10 +161,11 @@ $PY scripts/check_origin_match.py --run-id "$RUN_ID"
 # leakage gate: the planted personal data must reach the traces
 # through every expected channel (headers, query, body, enduser.id, ...); a run
 # collected with a silently reverted image would otherwise look fine
-# (pipefail: the "if" sees the check's exit code through the pipe to tail)
-if ! $PY scripts/leakage_check.py --run-id "$RUN_ID" --max-traces 5000 | tail -14; then
-  echo "[collect] leakage check FAILED - see ${RUN_DIR}/leakage.json"; exit 1
-fi
+# full output in leakage_check.log; the channel list (all of it) is shown here
+LEAK_OK=1
+$PY scripts/leakage_check.py --run-id "$RUN_ID" --max-traces 5000 >"${RUN_DIR}/leakage_check.log" 2>&1 || LEAK_OK=0
+sed -n '/expected leak channels/,$p' "${RUN_DIR}/leakage_check.log"
+[ "$LEAK_OK" = 1 ] || { echo "[collect] leakage check FAILED - see ${RUN_DIR}/leakage.json"; exit 1; }
 
 # find, not ls *.json - a big run has 100k+ files and the glob blows past ARG_MAX
 TRACES=$(find "data/raw_traces/${RUN_ID}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')

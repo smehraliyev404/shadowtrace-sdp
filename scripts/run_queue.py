@@ -216,12 +216,25 @@ def run_collect(collect_cmd, run_id, seed, flags):
     cmd = [*collect_cmd, run_id, "--seed", str(seed), *flags]
     with open(logpath, "a", encoding="utf-8") as lf:
         lf.write(f"\n=== {datetime.now().isoformat()} {' '.join(cmd)}\n")
+        # own process group, so stopping the queue can stop k6, the orchestrator and
+        # the attack scripts too (otherwise k6 keeps sending traffic into the next run)
         proc = subprocess.Popen(cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, text=True, bufsize=1)
-        for line in proc.stdout:
-            sys.stdout.write(line)
-            lf.write(line)
-        return proc.wait()
+                                stderr=subprocess.STDOUT, text=True, bufsize=1, start_new_session=True)
+        try:
+            for line in proc.stdout:
+                sys.stdout.write(line)
+                lf.write(line)
+            return proc.wait()
+        except BaseException:
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+                proc.wait(timeout=30)
+            except (ProcessLookupError, subprocess.TimeoutExpired):
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            raise
 
 
 def read_json(path):
@@ -260,10 +273,15 @@ def do_run(collect_cmd, run_id, seed, flags, before):
     rec["collect_exit"] = rc
     rec["loadavg_after"] = [round(x, 2) for x in os.getloadavg()]
 
-    after = pods() or {}
+    after = None
+    for _ in range(5):                       # a kubectl hiccup must not look like replaced pods
+        after = pods()
+        if after is not None:
+            break
+        time.sleep(10)
     restarted = {n: after[n][1] - before[n][1] for n in before
-                 if n in after and after[n][1] > before[n][1]}
-    replaced = sorted(set(before) ^ set(after))
+                 if n in after and after[n][1] > before[n][1]} if after is not None else {}
+    replaced = sorted(set(before) ^ set(after)) if after is not None else []
     rec["pod_restarts"] = restarted
     rec["pods_replaced"] = replaced
 
@@ -286,6 +304,8 @@ def do_run(collect_cmd, run_id, seed, flags, before):
         problems.append(f"pod restarts during run: {restarted}")
     if replaced:
         problems.append(f"pods replaced during run: {replaced}")
+    if after is None:
+        problems.append("could not read pods after the run (kubectl failed 5 times): restarts unverified")
     rec["problems"] = problems
     rec["status"] = "done" if not problems else "failed"
     rec["ended"] = datetime.now().isoformat(timespec="seconds")

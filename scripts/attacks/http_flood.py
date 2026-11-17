@@ -15,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-from provenance import Pacer, add_origin_args, origin_log_from_args, send  # noqa: E402
+from provenance import Pacer, Tally, add_origin_args, origin_log_from_args, send  # noqa: E402
 
 # cheap high-volume GETs that still fan out internally; all 9 products, so the
 # product id is not a shortcut either
@@ -34,9 +34,9 @@ def worker(base_url, label, log, counters, pacer, idx):
         i += 1
         try:
             r = send(session, "GET", base_url + path, log, label, timeout=5)
-            counters["ok" if r.status_code < 500 else "err"] += 1
+            counters.add("ok" if r.status_code < 500 else "err")
         except requests.RequestException:
-            counters["err"] += 1
+            counters.add("err")
         pacer.sleep()
 
 
@@ -52,7 +52,7 @@ def main():
     args = p.parse_args()
     log = origin_log_from_args(args, client="http_flood")
 
-    counters = {"ok": 0, "err": 0}
+    counters = Tally("ok", "err")
     start = time.time()
     print(f"[flood] {args.concurrency} workers -> {args.url} for {args.duration}s")
 

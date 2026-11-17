@@ -93,6 +93,9 @@ def main():
     if logged == 0:
         print(f"[lateral] WARNING: no ORIGIN lines from {args.source} (exit {proc.returncode})")
         sys.exit(1)
+    if proc.returncode != 0:      # crashed or killed part-way: the burst is shorter than planned
+        print(f"[lateral] pod script exited {proc.returncode} after {logged} calls - burst incomplete")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

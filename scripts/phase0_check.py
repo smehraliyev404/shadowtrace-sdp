@@ -22,7 +22,6 @@ import argparse
 import json
 import os
 import random
-import secrets
 import sys
 import time
 from collections import defaultdict
@@ -48,27 +47,8 @@ CURRENCIES = ["EUR", "USD", "JPY", "GBP", "CAD", "TRY"]
 
 # ---------------------------------------------------------------- trace IDs
 
-def new_ids():
-    """A client-chosen trace ID (32 hex) and parent span ID (16 hex).
-
-    No leading zero: Jaeger may print IDs without leading zeros, which would
-    break the string match against our ID.
-    """
-    trace_id = secrets.token_hex(16)
-    while trace_id[0] == "0":
-        trace_id = secrets.token_hex(16)
-    span_id = secrets.token_hex(8)
-    while span_id[0] == "0":
-        span_id = secrets.token_hex(8)
-    return trace_id, span_id
-
-
-def traceparent(trace_id, span_id):
-    return f"00-{trace_id}-{span_id}-01"   # 01 = sampled
-
-
-def norm_id(value):
-    return (value or "").lower().lstrip("0")
+from provenance import new_ids, traceparent  # noqa: E402  (same ID rules as every client)
+from check_origin_match import norm as norm_id  # noqa: E402
 
 
 # ---------------------------------------------------------------- Jaeger

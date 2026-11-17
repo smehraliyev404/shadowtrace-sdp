@@ -4,7 +4,7 @@
 #   ./build_images.sh && kubectl apply -f ../microservices-demo-main/release/kubernetes-manifests.yaml
 #   ./build_images.sh emailservice        # rebuild just one after a code change
 #
-# The 3 stubs are ours. The other 7 are upstream Boutique services with our fixes
+# The 3 stubs are ours. The other 10 are upstream Boutique services with our fixes
 # (see the "ShadowTrace:" comments in their source):
 #   currencyservice, paymentservice  old OTLP exporter dropped parent span IDs
 #   checkoutservice                  context.TODO() lost the trace on Convert calls
@@ -38,12 +38,18 @@ for s in $IMAGES; do
   [ "$s" = cartservice ] && ctx="$SRC/cartservice/src"   # its Dockerfile lives in src/
   [ -d "$ctx" ] || { echo "[build] no source folder $ctx"; exit 1; }
   echo "[build] shadowtrace/${s}:latest"
+  # minikube image build can exit 0 on a failed build (C16), and checking that
+  # ":latest" exists would pass on the OLD image. So build under a one-off tag
+  # that only exists if THIS build worked, then point :latest at it.
   # zsh/bash note: keep the braces, a bare $s:latest is mangled by zsh's :l modifier
-  $MK image build -t "shadowtrace/${s}:latest" "$ctx" >"/tmp/build_${s}.log" 2>&1 \
+  tag="build-$(date +%Y%m%d%H%M%S)-$$"
+  $MK image build -t "shadowtrace/${s}:${tag}" "$ctx" >"/tmp/build_${s}.log" 2>&1 \
     || { echo "[build] FAILED $s - see /tmp/build_${s}.log"; exit 1; }
-  # minikube image build can exit 0 on a failed build, so check the image exists
-  $MK image ls | grep -q "shadowtrace/${s}:latest" \
-    || { echo "[build] FAILED $s - no image after build, see /tmp/build_${s}.log"; exit 1; }
+  $MK image ls | grep -q "shadowtrace/${s}:${tag}" \
+    || { echo "[build] FAILED $s - this build produced no image, see /tmp/build_${s}.log"; exit 1; }
+  $MK image tag "shadowtrace/${s}:${tag}" "shadowtrace/${s}:latest" >>"/tmp/build_${s}.log" 2>&1 \
+    || { echo "[build] FAILED $s - could not tag it :latest"; exit 1; }
+  $MK image rm "shadowtrace/${s}:${tag}" >>"/tmp/build_${s}.log" 2>&1 || true   # keep only :latest
 done
 
 echo "[build] done. Images in the cluster:"
