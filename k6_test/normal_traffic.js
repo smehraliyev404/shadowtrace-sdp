@@ -97,8 +97,11 @@ function send(method, url, body, step, extraHeaders, pii) {
   for (let hop = 0; hop < 4; hop++) {
     const traceId = hex(16);
     const spanId = hex(8);
+    // a redirect hop re-sends extraHeaders (Authorization, X-User-Email, ...), so its
+    // ground truth keeps the pii too; values a hop does not send just never appear
+    const resent = hop > 0 && extraHeaders && Object.keys(extraHeaders).length > 0;
     const truth = Object.assign({}, url.startsWith(BASE) && SESSION_ID ? { session_id: SESSION_ID } : {},
-                                hop === 0 ? (pii || {}) : {});
+                                hop === 0 || resent ? (pii || {}) : {});
     console.log('ORIGIN ' + JSON.stringify({
       ts: Date.now() / 1000, trace_id: traceId, span_id: spanId,
       origin: 'normal', client: 'k6', run_id: RUN_ID, seed: M.seed,
@@ -253,7 +256,10 @@ export default function () {
   // 0. login: ~15% with their own account, ~5% mistype first, then retry
   if (loggedIn) {
     if (roll < J.p_login_typo) {
-      const typo = pick(r, [who.password.slice(0, -1), who.password.toUpperCase(),
+      // three typos that always differ from the password (it is 12 hex characters, so
+      // an upper-case variant would equal an all-digit password); same RNG draws as before
+      const last = who.password.slice(-1);
+      const typo = pick(r, [who.password.slice(0, -1), who.password.slice(0, -1) + (last === '0' ? '1' : '0'),
                             who.password.slice(1) + who.password[0]]);
       send('POST', `${AUTH}/login`, { username: who.username, password: typo }, 'login_typo', null,
            { username: who.username, password: typo });
