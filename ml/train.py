@@ -28,9 +28,9 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 
-from ml.data import CLASSES, NODE_FEATURES, PROJECT_ROOT, Prep, build, load_runs
+from ml.data import CLASSES, L0_REDACTED, NODE_FEATURES, PROJECT_ROOT, Prep, build, load_runs
 from ml.metrics import macro_f1
-from ml.models import DEFAULTS, GRIDS, STGNN, class_weights, make_flat
+from ml.models import DEFAULTS, GRIDS, STGNN, class_weights, make_flat, resolve_device
 
 MODELS = {"stgnn": "gatv2", "stgnn_gcn": "gcn", "stgnn_sage": "sage", "rf": None, "gbm": None, "mlp": None,
           "svm": None}
@@ -55,7 +55,7 @@ def predict_gnn(model, ds, batch=256):
     out = []
     with torch.no_grad():
         for i in range(0, len(ds), batch):
-            out.append(F.softmax(model(ds.graphs, torch.tensor(ds.seq[i:i + batch])), dim=1).numpy())
+            out.append(F.softmax(model(ds.graphs, torch.tensor(ds.seq[i:i + batch])), dim=1).cpu().numpy())
     return np.concatenate(out) if out else np.zeros((0, len(CLASSES)))
 
 
@@ -82,17 +82,18 @@ def batches(ds, size, rng, by_run):
 def train_gnn(a, data, seed):
     tr, va = data["train"], data.get("val")
     has_val = va is not None and len(va) > 0
+    dev = resolve_device(a.device)
     model = STGNN(len(NODE_FEATURES), 7, a.prep.n_services, len(CLASSES), encoder=MODELS[a.model],
-                  hidden=a.hidden)
+                  hidden=a.hidden).to(dev)
     opt = torch.optim.Adam(model.parameters(), lr=a.lr)
-    w = class_weights(tr.y, len(CLASSES))
+    w = class_weights(tr.y, len(CLASSES)).to(dev)
     rng = np.random.default_rng(seed)
     best, best_state, best_epoch, wait, hist = -1.0, None, 0, 0, []
     for epoch in range(1, a.epochs + 1):
         model.train()
         loss_sum = 0.0
         for idx in batches(tr, a.batch, rng, a.batching == "run"):
-            loss = F.cross_entropy(model(tr.graphs, torch.tensor(tr.seq[idx])), torch.tensor(tr.y[idx]), weight=w)
+            loss = F.cross_entropy(model(tr.graphs, torch.tensor(tr.seq[idx])), torch.tensor(tr.y[idx]).to(dev), weight=w)
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -174,11 +175,15 @@ def add_split_args(ap):
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out-dir", default=os.path.join(PROJECT_ROOT, "results"))
     ap.add_argument("--overwrite", action="store_true", help="replace an existing results folder")
+    ap.add_argument("--device", default="auto", help="auto (CUDA if available, else CPU), cpu, cuda, mps")
+    ap.add_argument("--l0-redacted", action=argparse.BooleanOptionalAction, default=L0_REDACTED,
+                    help="L0 only: c_redacted from the L1 windows (D19); default from ml/data.py L0_REDACTED")
 
 
 # arguments that say WHICH data a result is for; every other argument is a model setting
 DATA_ARGS = {"help", "split", "assignment", "train", "val", "test", "heldout", "allow_overlap", "level", "k",
-             "seed", "out_dir", "overwrite", "features_dir", "name", "model", "no_seen", "no_content"}
+             "seed", "out_dir", "overwrite", "features_dir", "name", "model", "no_seen", "no_content", "device",
+             "l0_redacted"}
 
 
 def variant(ap, a):
@@ -244,7 +249,7 @@ def main():
     name, out = results_dir(a, model_name)          # before training: refuse early, not after an hour
     set_seed(a.seed)
     t0 = time.time()
-    windows = {p: load_runs(r, a.level, a.features_dir) for p, r in runs.items() if r}
+    windows = {p: load_runs(r, a.level, a.features_dir, a.l0_redacted) for p, r in runs.items() if r}
     a.prep = Prep.fit(windows["train"])
     assert set(a.prep.train_runs) == set(runs["train"]), "normalisation must come from training runs only"
     data = {p: build(w, a.prep, a.k, use_seen=not a.no_seen, use_content=not a.no_content)
@@ -279,7 +284,7 @@ def main():
     if hist:
         pd.DataFrame(hist).to_csv(os.path.join(out, "history.csv"), index=False)
     cfg = {k: v for k, v in vars(a).items() if k != "prep"}
-    cfg.update({"model_name": model_name, "runs": runs, "assignment": a.assignment if a.split else None,
+    cfg.update({"model_name": model_name, "device_used": str(resolve_device(a.device)), "runs": runs, "assignment": a.assignment if a.split else None,
                 "n_samples": {p: len(d) for p, d in data.items()},
                 "train_labels": pd.Series(data["train"].meta["label"]).value_counts().to_dict(),
                 "services": a.prep.services, "edge_vocab": len(a.prep.edge_vocab),

@@ -49,6 +49,7 @@ from ml.data import CLASSES, load_runs
 T_IN = 4               # input windows; the paper does not give T'
 MIN_ERR_SD = 0.05      # floor for the per-node error sigma (inputs are standardised, so 0.05 = 5 % of a node's spread)
 FLAGGED = len(CLASSES)  # pred of a flagged window: out of range for CLASSES on purpose (a detector names no class)
+from ml.models import resolve_device
 from ml.train import add_split_args, results_dir, set_seed, split_runs, variant
 
 
@@ -153,12 +154,19 @@ class DCGRUCell(nn.Module):
 class DCRNN(nn.Module):
     def __init__(self, sup, hidden=150, layers=2, k=2):
         super().__init__()
-        self.sup = sup
+        self.n_sup = len(sup)
+        for i, P in enumerate(sup):               # buffers, so .to(device) moves them too
+            self.register_buffer(f"sup{i}", P)
         self.enc = nn.ModuleList([DCGRUCell(1 if i == 0 else hidden, hidden, len(sup), k) for i in range(layers)])
         self.dec = nn.ModuleList([DCGRUCell(1 if i == 0 else hidden, hidden, len(sup), k) for i in range(layers)])
         self.proj = nn.Linear(hidden, 1)
 
+    @property
+    def sup(self):
+        return [getattr(self, f"sup{i}") for i in range(self.n_sup)]
+
     def forward(self, x):                           # x: [B, T, N] -> [B, N]
+        x = x.to(self.sup[0].device)
         B, T, N = x.shape
         h = [x.new_zeros(B, N, c.hidden) for c in self.enc]
         for t in range(T):
@@ -194,7 +202,7 @@ def main():
     name, out = results_dir(a, model_name)          # before training
     set_seed(a.seed)
     t0 = time.time()
-    win = {p: load_runs(r, a.level, a.features_dir) for p, r in runs.items() if r}
+    win = {p: load_runs(r, a.level, a.features_dir, a.l0_redacted) for p, r in runs.items() if r}
     if "op_edges" not in win["train"]:
         raise SystemExit("windows.parquet has no op_edges: rebuild the features with build_features.py")
     pairs, A = build_graph(win["train"])
@@ -211,7 +219,8 @@ def main():
         raise SystemExit("no all-normal training sequences (use --relaxed only for laptop tests)")
     has_val = "val" in win
     xva, yva, _ = sequences(win["val"], X["val"], a.t_in, True, a.relaxed) if has_val else (None, None, None)
-    model = DCRNN(supports(A), a.hidden, a.layers, a.diffusion_k)
+    dev = resolve_device(a.device)
+    model = DCRNN(supports(A), a.hidden, a.layers, a.diffusion_k).to(dev)
     opt = torch.optim.Adam(model.parameters(), lr=a.lr)
     # decay ratio 0.1 (§5.4); the paper gives no decay epochs, these are an assumption
     sched = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[20, 30, 40], gamma=0.1)
@@ -222,14 +231,14 @@ def main():
         order, tot = rng.permutation(len(xtr)), 0.0
         for i in range(0, len(order), a.batch):
             b = order[i:i + a.batch]
-            loss = nn.functional.l1_loss(model(torch.tensor(xtr[b])), torch.tensor(ytr[b]))
+            loss = nn.functional.l1_loss(model(torch.tensor(xtr[b])), torch.tensor(ytr[b]).to(dev))
             opt.zero_grad()
             loss.backward()
             opt.step()
             tot += loss.item() * len(b)
         model.eval()
         with torch.no_grad():
-            vl = float(nn.functional.l1_loss(model(torch.tensor(xva)), torch.tensor(yva))) \
+            vl = float(nn.functional.l1_loss(model(torch.tensor(xva)), torch.tensor(yva).to(dev))) \
                 if has_val and len(xva) else tot / len(xtr)
         sched.step()
         hist.append({"epoch": epoch, "train_mae": tot / len(xtr), "val_mae": vl})
@@ -245,7 +254,7 @@ def main():
 
     def errors(xs, ys):
         with torch.no_grad():
-            return ys - model(torch.tensor(xs)).numpy()
+            return ys - model(torch.tensor(xs)).cpu().numpy()
 
     ref = errors(xva, yva) if has_val and len(xva) else errors(xtr, ytr)
     e_mu, e_sd = ref.mean(0), ref.std(0)
@@ -276,7 +285,7 @@ def main():
     pred.to_parquet(os.path.join(out, "predictions.parquet"), index=False)
     pd.DataFrame(hist).to_csv(os.path.join(out, "history.csv"), index=False)
     cfg = {k: v for k, v in vars(a).items()}
-    cfg.update({"model_name": model_name, "detector": True, "runs": runs,
+    cfg.update({"model_name": model_name, "device_used": str(dev), "detector": True, "runs": runs,
                 "assignment": a.assignment if a.split else None, "n_pairs": len(pairs),
                 "pairs": [list(p) for p in pairs], "train_sequences": len(xtr),
                 "val_sequences": 0 if xva is None else len(xva), "best_epoch": best_epoch,

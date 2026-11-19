@@ -24,7 +24,7 @@ against a reference model, Holm-corrected, separately for every level and k
 level, k, model and repetition are an error).
 
     ./venv/bin/python -m ml.metrics results/*/predictions.parquet --part test
-    ./venv/bin/python -m ml.metrics results/*/predictions.parquet --part test --compare stgnn_gatv2 --metric macro_f1
+    ./venv/bin/python -m ml.metrics results/*/predictions.parquet --part test --compare stgnn --metric macro_f1
 """
 
 import argparse
@@ -200,7 +200,8 @@ def main():
     for r in res:
         m, ci = r["metrics"], r["ci95"]
         line = "  ".join(f"{k} {m[k]:.3f}" + (f" [{ci[k][0]:.3f}, {ci[k][1]:.3f}]" if k in ci else "")
-                         for k in ("macro_f1", "binary_f1", "pr_auc", "tpr_at_1fpr_val", "pauc_1fpr") if k in m)
+                         for k in ("macro_f1", "binary_f1", "pr_auc", "tpr_at_1fpr_val", "fpr_at_val_threshold", "pauc_1fpr")
+                         if k in m)
         print(f"{r['group']:<7} {r['model']:<16} {r['rep']:<8} n={m['n']:<5} {line}")
     out = {"results": res}
     if a.compare:                      # models are compared within one level and k only

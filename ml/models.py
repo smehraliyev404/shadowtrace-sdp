@@ -86,9 +86,13 @@ class STGNN(nn.Module):
         self.gru = nn.GRU(2 * hidden, hidden, batch_first=True)
         self.out = nn.Linear(hidden, n_classes)
 
+    @property
+    def device(self):
+        return next(self.parameters()).device
+
     def embed_windows(self, graphs):
         """List of window graphs -> [n_windows, 2 * hidden]."""
-        b = Batch.from_data_list(graphs)
+        b = Batch.from_data_list(graphs).to(self.device)
         n = b.x.size(0)
         ea = b.edge_attr
         e_in = scatter(ea, b.edge_index[1], dim=0, dim_size=n, reduce="mean")
@@ -101,15 +105,23 @@ class STGNN(nn.Module):
 
     def forward(self, graphs, seq):
         """graphs: all window graphs of the dataset; seq: LongTensor [B, T], -1 = padding."""
+        seq = seq.cpu()                       # indices into the (CPU) list of graphs
         used = torch.unique(seq[seq >= 0])
         emb = self.embed_windows([graphs[i] for i in used.tolist()])
         lookup = torch.full((int(seq.max()) + 1,), -1, dtype=torch.long)
         lookup[used] = torch.arange(len(used))
-        z = torch.zeros(seq.size(0), seq.size(1), emb.size(1))
+        z = torch.zeros(seq.size(0), seq.size(1), emb.size(1), device=emb.device)
         mask = seq >= 0
-        z[mask] = emb[lookup[seq[mask]]]
+        z[mask.to(emb.device)] = emb[lookup[seq[mask]].to(emb.device)]
         _, h = self.gru(z)
         return self.out(h[-1])
+
+
+def resolve_device(name):
+    """--device: "auto" = CUDA if available, else CPU; or an explicit torch device."""
+    if name == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return torch.device(name)
 
 
 def class_weights(y, n_classes):

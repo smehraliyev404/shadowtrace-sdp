@@ -55,7 +55,7 @@ from torch_geometric.nn import GCNConv, global_mean_pool
 
 from ml.data import CLASSES, FEATURES_DIR
 from ml.metrics import macro_f1
-from ml.models import class_weights
+from ml.models import class_weights, resolve_device
 from ml.train import add_split_args, results_dir, set_seed, split_runs, variant
 
 N_TFIDF = 16
@@ -151,6 +151,7 @@ class MaGCN(nn.Module):
         self.mlp = nn.Sequential(nn.Linear(hidden, hidden), nn.ReLU(), nn.Linear(hidden, n_classes))
 
     def forward(self, b):
+        b = b.to(next(self.parameters()).device)
         h = F.relu(self.c1(b.x, b.edge_index))
         h = F.relu(self.c2(h, b.edge_index))
         return self.mlp(global_mean_pool(h, b.batch))
@@ -180,7 +181,7 @@ def predict(model, graphs, batch=1024):
     out = []
     with torch.no_grad():
         for i in range(0, len(graphs), batch):
-            out.append(F.softmax(model(Batch.from_data_list(graphs[i:i + batch])), 1).numpy())
+            out.append(F.softmax(model(Batch.from_data_list(graphs[i:i + batch])), 1).cpu().numpy())
     return np.concatenate(out) if out else np.zeros((0, len(CLASSES)))
 
 
@@ -232,9 +233,10 @@ def main():
         kv = [i for i, x in enumerate(g) if x is not None]
         gva, yva = [g[i] for i in kv], np.array([CLASSES.index(lab) for lab in va["label"].iloc[kv]])
 
-    model = MaGCN(feat.dim, len(CLASSES), a.hidden)
+    dev = resolve_device(a.device)
+    model = MaGCN(feat.dim, len(CLASSES), a.hidden).to(dev)
     opt = torch.optim.Adam(model.parameters(), lr=a.lr)
-    w = class_weights(ytr, len(CLASSES))
+    w = class_weights(ytr, len(CLASSES)).to(dev)
     rng = np.random.default_rng(a.seed)
     best, best_state, best_epoch, wait, hist = -1.0, None, 0, 0, []
     for epoch in range(1, a.epochs + 1):
@@ -242,7 +244,7 @@ def main():
         order, tot = rng.permutation(len(gtr)), 0.0
         for i in range(0, len(order), a.batch):
             b = order[i:i + a.batch]
-            loss = F.cross_entropy(model(Batch.from_data_list([gtr[j] for j in b])), torch.tensor(ytr[b]), weight=w)
+            loss = F.cross_entropy(model(Batch.from_data_list([gtr[j] for j in b])), torch.tensor(ytr[b]).to(dev), weight=w)
             opt.zero_grad()
             loss.backward()
             opt.step()
@@ -283,7 +285,7 @@ def main():
     reqs.to_parquet(os.path.join(out, "requests.parquet"), index=False)
     pd.DataFrame(hist).to_csv(os.path.join(out, "history.csv"), index=False)
     cfg = {k: v for k, v in vars(a).items()}
-    cfg.update({"model_name": model_name, "runs": runs, "assignment": a.assignment if a.split else None,
+    cfg.update({"model_name": model_name, "device_used": str(dev), "runs": runs, "assignment": a.assignment if a.split else None,
                 "train_traces": len(gtr), "train_labels": pd.Series(ytr).map(dict(enumerate(CLASSES))).value_counts().to_dict(),
                 "val_traces": len(gva), "services": feat.services,
                 "tfidf_terms": feat.terms,

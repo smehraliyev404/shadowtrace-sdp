@@ -85,6 +85,7 @@ ml/
   ma.py                    Ma 2026 baseline: one GCN graph per request, scored per window too
   metrics.py               metrics, block-bootstrap CIs, Wilcoxon + Holm
   sanity.py                checks to pass before trusting results
+  run_grid.py              runs the whole experiment grid in priority order, resumable
 splits/batch3.json         the fixed split of batch 3
 experiments/parallel_runs/ test of whether a second cluster changes latency
 analytics/, DB/, collector/  earlier work (see docs/mongodb.md)
@@ -172,7 +173,24 @@ runs only.
 ./venv/bin/python -m ml.jacob --split splits/batch3.json --assignment 0 --seed 1 --level L2
 ./venv/bin/python -m ml.ma --split splits/batch3.json --assignment 0 --seed 1 --level L1
 ./venv/bin/python -m ml.metrics results/*/predictions.parquet --part test --compare stgnn
+./venv/bin/python -m ml.metrics results/*_k3_a*_s*/predictions.parquet --part test --n-boot 0 --out results/metrics_k3_test.json
+./venv/bin/python -m ml.summary results/metrics_k3_test.json --ref stgnn   # means ± sd, Wilcoxon + Holm vs stgnn, RQ3 level vs L0
+./venv/bin/python -m ml.probes --split splits/batch3.json --assignment 0   # one-feature shortcut probes, L0/L1 content drift
+# --l0-redacted (any model CLI, probes): L0 takes c_redacted from L1 (PLAN.md D19); default in ml/data.py L0_REDACTED
 ```
+
+The whole grid (every model, level, assignment and seed) in priority order, skipping
+results that already exist, logs in `results/logs/`:
+
+```bash
+./venv/bin/python -m ml.run_grid --stages main --dry-run          # show the plan
+./venv/bin/python -m ml.run_grid --stages main --jobs 4           # first table: k = 3, seed 1
+./venv/bin/python -m ml.run_grid --stages seeds,ablations,k --jobs 4
+```
+
+`--device` (default `auto`: CUDA if available) selects where the ST-GNN, Jacob and
+Ma run; the device used is stored in each result's `config.json`. Results from
+different devices are not bit-identical, so one study uses one device.
 
 Models: `stgnn` (GATv2, main), `stgnn_gcn`, `stgnn_sage`, and the flat baselines
 `rf`, `gbm`, `mlp`, `svm`, each tuned by grid search on the validation runs

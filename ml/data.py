@@ -44,15 +44,43 @@ WINDOW_FEATURES = ("n_traces", "n_spans", "n_calls", "n_edges", "n_patterns",
 LOG_WINDOW = {"n_traces", "n_spans", "n_calls", "n_edges", "n_patterns", "trace_p50_us", "trace_p95_us"}
 OTHER = "<other>"
 FEATURES_DIR = os.path.join(PROJECT_ROOT, "data", "features")
+# D19: at L0 the node feature c_redacted is 0 by construction (nothing is redacted),
+# so L1 had a signal L0 lacked. With this on, L0 takes each node's c_redacted from
+# the L1 windows of the same run: the share of values the L1 redactor WOULD replace,
+# computable from the raw L0 spans by the same rules. On since 19 Nov (every L0 result
+# retrained; the earlier L0 results, without it, are in results_old_L0/ on the lab).
+L0_REDACTED = True
 
 
-def load_runs(run_ids, level="L2", features_dir=None):
-    d = features_dir or FEATURES_DIR
+def _read(run_ids, level, d):
     missing = [r for r in run_ids if not os.path.exists(os.path.join(d, r, level, "windows.parquet"))]
     if missing:
         raise FileNotFoundError(f"no {level} features for {missing} in {d} (run build_features.py)")
-    w = pd.concat([pd.read_parquet(os.path.join(d, r, level, "windows.parquet")) for r in run_ids],
-                  ignore_index=True)
+    return pd.concat([pd.read_parquet(os.path.join(d, r, level, "windows.parquet")) for r in run_ids],
+                     ignore_index=True)
+
+
+def with_l1_redacted(w0, w1):
+    """L0 windows with every node's c_redacted replaced by the L1 value of the same
+    run, window and service (0 where L1 has no such node)."""
+    ref = {(r, int(win)): {n["service"]: float(n.get("c_redacted", 0.0)) for n in nodes}
+           for r, win, nodes in zip(w1["run_id"], w1["window"], w1["nodes"])}
+    keys = list(zip(w0["run_id"], w0["window"].astype(int)))
+    missing = [k for k in keys if k not in ref]
+    if missing:
+        raise ValueError(f"{len(missing)} L0 windows have no L1 window, e.g. {missing[:3]}")
+    w0 = w0.copy()
+    w0["nodes"] = [[{**n, "c_redacted": ref[k].get(n["service"], 0.0)} for n in nodes]
+                   for k, nodes in zip(keys, w0["nodes"])]
+    return w0
+
+
+def load_runs(run_ids, level="L2", features_dir=None, l0_redacted=None):
+    """l0_redacted: None = L0_REDACTED (only matters for level L0)."""
+    d = features_dir or FEATURES_DIR
+    w = _read(run_ids, level, d)
+    if level == "L0" and (L0_REDACTED if l0_redacted is None else l0_redacted):
+        w = with_l1_redacted(w, _read(run_ids, "L1", d)[["run_id", "window", "nodes"]])
     return w.sort_values(["run_id", "window"]).reset_index(drop=True)
 
 
