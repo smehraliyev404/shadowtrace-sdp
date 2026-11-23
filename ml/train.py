@@ -231,6 +231,9 @@ def main():
     add_split_args(ap)
     ap.add_argument("--no-seen", action="store_true")
     ap.add_argument("--no-content", action="store_true")
+    ap.add_argument("--leave-out", choices=list(CLASSES[1:]),
+                    help="leave-one-attack-out: drop every training/validation window that holds any trace of "
+                         "this attack (test and held-out runs keep it)")
     ap.add_argument("--no-tune", action="store_true",
                     help="flat baselines: use DEFAULTS instead of the grid search on validation runs")
     ap.add_argument("--epochs", type=int, default=200)
@@ -250,6 +253,14 @@ def main():
     set_seed(a.seed)
     t0 = time.time()
     windows = {p: load_runs(r, a.level, a.features_dir, a.l0_redacted) for p, r in runs.items() if r}
+    left_out = {}
+    if a.leave_out:              # the model must never see a trace of this attack (not even in "seen" edges)
+        for p in ("train", "val"):
+            if p in windows:
+                w = windows[p]
+                keep = w[f"n_{a.leave_out}"] == 0
+                left_out[p] = int((~keep).sum())
+                windows[p] = w[keep].reset_index(drop=True)
     a.prep = Prep.fit(windows["train"])
     assert set(a.prep.train_runs) == set(runs["train"]), "normalisation must come from training runs only"
     data = {p: build(w, a.prep, a.k, use_seen=not a.no_seen, use_content=not a.no_content)
@@ -285,7 +296,7 @@ def main():
         pd.DataFrame(hist).to_csv(os.path.join(out, "history.csv"), index=False)
     cfg = {k: v for k, v in vars(a).items() if k != "prep"}
     cfg.update({"model_name": model_name, "device_used": str(resolve_device(a.device)), "runs": runs, "assignment": a.assignment if a.split else None,
-                "n_samples": {p: len(d) for p, d in data.items()},
+                "n_samples": {p: len(d) for p, d in data.items()}, "left_out_windows": left_out,
                 "train_labels": pd.Series(data["train"].meta["label"]).value_counts().to_dict(),
                 "services": a.prep.services, "edge_vocab": len(a.prep.edge_vocab),
                 "normal_windows_for_edge_stats": a.prep.edge_stats["normal_windows"],

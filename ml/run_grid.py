@@ -16,6 +16,10 @@ assignment and seed, run by ml.train / ml.jacob / ml.ma):
   ablations  ST-GNN without "seen" (L0, L1, L2) and without content features
              (L0, L1; at L2 they are 0 anyway), 5 assignments x 5 seeds
   k          k = 1, 5, 10: every model at every level, seed 1, 5 assignments
+  loao       leave-one-attack-out: ST-GNN, SVM, LightGBM, RF, MLP trained without
+             one attack type (every window holding any of its traces dropped from
+             training and validation), L2, k = 3, seed 1, 5 assignments, 8 attacks
+  rules      simple rule detectors (ml.rules), L2, k = 3, 5 assignments
 
 A training whose result folder already exists is skipped (the model scripts
 refuse to overwrite), so the same command continues after a stop. Each
@@ -35,7 +39,10 @@ from datetime import datetime
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LEVELS = ("L0", "L1", "L2")
 WINDOW_MODELS = ("stgnn", "stgnn_gcn", "stgnn_sage", "rf", "gbm", "mlp", "svm")
-STAGES = ("batching", "main", "seeds", "ablations", "k")
+STAGES = ("batching", "main", "seeds", "ablations", "k", "loao", "rules")
+LOAO_MODELS = ("stgnn", "svm", "gbm", "rf", "mlp")
+ATTACKS = ("http_flood", "exfiltration", "sqli_probe", "brute_force", "session_rotation_brute",
+           "slow_brute", "ssrf_probe", "lateral_movement")
 
 
 def job(module, level, k, assignment, seed, extra=(), name=None):
@@ -78,6 +85,13 @@ def plan(stage, assignments, seeds):
                     if lv != "L2":
                         jobs.append(window("stgnn", lv, 3, a, s, "--no-content"))
         return jobs
+    if stage == "loao":
+        for att in ATTACKS:
+            for a in assignments:
+                jobs += [window(m, "L2", 3, a, 1, "--leave-out", att) for m in LOAO_MODELS]
+        return jobs
+    if stage == "rules":
+        return [job("ml.rules", "L2", 3, a, 1) for a in assignments]
     raise ValueError(stage)
 
 

@@ -177,6 +177,10 @@ runs only.
 ./venv/bin/python -m ml.summary results/metrics_k3_test.json --ref stgnn   # means ± sd, Wilcoxon + Holm vs stgnn, RQ3 level vs L0
 ./venv/bin/python -m ml.probes --split splits/batch3.json --assignment 0   # one-feature shortcut probes, L0/L1 content drift
 # --l0-redacted (any model CLI, probes): L0 takes c_redacted from L1 (PLAN.md D19); default in ml/data.py L0_REDACTED
+./venv/bin/python -m ml.train --model stgnn --split splits/batch3.json --leave-out ssrf_probe   # leave-one-attack-out
+./venv/bin/python -m ml.rules --split splits/batch3.json --assignment 0            # rule detectors (volume, errors, auth failures, new edges, latency, any)
+./venv/bin/python -m ml.ci results/*_k3_a*_s*/predictions.parquet --part heldout --jobs 16   # two-level bootstrap 95 % CIs
+./venv/bin/python scripts/pii_by_service.py --queue queues/batch3.txt --jobs 16    # RQ1: personal values per service, L0 and L1
 ```
 
 The whole grid (every model, level, assignment and seed) in priority order, skipping

@@ -96,6 +96,7 @@ def point_metrics(df, val_threshold=None, detector=False):
          "binary_f1": macro_f1(yb, pb),
          "binary_mcc": float(matthews_corrcoef(yb, pb)) if len(set(yb) | set(pb)) > 1 else nan,
          "binary_pr_auc": float(average_precision_score(yb, score)) if 0 < yb.sum() < len(yb) else nan}
+    m["fpr_pred"] = float((p[~is_attack] != 0).mean()) if (~is_attack).any() else nan   # same rule as detect_<attack>
     m["tpr_at_1fpr_curve"] = tpr_at_fpr(is_attack, score)
     m["pauc_1fpr"] = bounded_auc(is_attack, score)
     if val_threshold is not None:
@@ -106,7 +107,9 @@ def point_metrics(df, val_threshold=None, detector=False):
         ci = CLASSES.index(c)
         if (y == ci).any():
             m[f"recall_{c}"] = nan if detector else float((p[y == ci] == ci).mean())
-            m[f"detect_{c}"] = float((p[y == ci] != 0).mean())
+            m[f"detect_{c}"] = float((p[y == ci] != 0).mean())          # predicted class is an attack
+            if val_threshold is not None:                                 # same rule as fpr_at_val_threshold
+                m[f"detect_thr_{c}"] = float((score[y == ci] > val_threshold).mean())
     return m
 
 

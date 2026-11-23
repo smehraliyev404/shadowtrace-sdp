@@ -25,13 +25,14 @@ pairs (its smallest possible two-sided value is 0.0625).
 
 import argparse
 import json
+import re
 
 import numpy as np
 from scipy.stats import wilcoxon
 
 from ml.metrics import ATTACK_CLASSES, compare, holm
 
-METRICS = ("macro_f1", "binary_f1", "pr_auc", "pauc_1fpr", "tpr_at_1fpr_val", "fpr_at_val_threshold")
+METRICS = ("macro_f1", "binary_f1", "pr_auc", "pauc_1fpr", "tpr_at_1fpr_val", "fpr_at_val_threshold", "fpr_pred")
 TESTED = ("macro_f1", "binary_f1", "pauc_1fpr")
 
 
@@ -79,7 +80,7 @@ def main():
         for r in res:
             table.setdefault((r["group"], r["model"]), {})[r["rep"]] = r["metrics"]
         groups = sorted({g for g, _ in table})
-        rep = out.setdefault(part, {"means": [], "vs_ref": {}, "rq3": {}, "per_attack": []})
+        rep = out.setdefault(part, {"means": [], "vs_ref": {}, "rq3": {}, "per_attack": [], "loao": []})
 
         print(f"\n=== {part}: means over repetitions ({path})")
         print(f"{'group':<7} {'model':<22} {'reps':>4}  " + "  ".join(f"{m:>19}" for m in METRICS))
@@ -99,9 +100,11 @@ def main():
 
         short = {c: c.replace("http_flood", "flood").replace("session_rotation_brute", "sess_rot").replace("lateral_movement", "lateral")
                  .replace("exfiltration", "exfil")[:9] for c in ATTACK_CLASSES}
-        for kind in ("detect", "recall"):
-            print(f"\n=== {part}: per attack, {kind} (share of the attack's windows "
-                  + ("flagged as any attack" if kind == "detect" else "labelled as that attack") + "), mean")
+        what = {"detect_thr": "flagged by the validation threshold (pair with fpr_at_val_threshold)",
+                "detect": "whose predicted class is an attack (pair with fpr_pred)",
+                "recall": "labelled as exactly that attack"}
+        for kind in ("detect_thr", "detect", "recall"):
+            print(f"\n=== {part}: per attack, {kind}: share of the attack's windows {what[kind]}, mean")
             print(f"{'group':<7} {'model':<22} " + " ".join(f"{short[c]:>9}" for c in ATTACK_CLASSES))
             for (g, model), reps in sorted(table.items()):
                 vals = []
@@ -113,6 +116,33 @@ def main():
                 rep["per_attack"].append({"group": g, "model": model, "kind": kind,
                                           **{c: v for c, v in zip(ATTACK_CLASSES, vals)}})
                 print(f"{g:<7} {model:<22} " + " ".join(f"{'–':>9}" if np.isnan(v) else f"{v:>9.3f}" for v in vals))
+
+        loao = {}
+        for (g, model), reps in table.items():
+            mm = re.fullmatch(r"(.+)_leaveout(.+)", model)
+            if mm and mm.group(2) in ATTACK_CLASSES:
+                loao[(g, mm.group(1), mm.group(2))] = reps
+        if loao:
+            print(f"\n=== {part}: leave one attack out: share of the LEFT-OUT attack's windows flagged as an attack "
+                  "(trained without it) vs the same model trained on all attacks (same repetitions), and FPR")
+            for (g, base, att), reps in sorted(loao.items()):
+                full = table.get((g, base), {})
+                common = sorted(set(reps) & set(full))
+                def mean(dd, key, rs):
+                    v = np.array([dd[r].get(key, np.nan) for r in rs], float)
+                    return float(np.nanmean(v)) if (~np.isnan(v)).any() else float("nan")
+                row = {"group": g, "model": base, "attack": att, "reps": len(reps),
+                       "detect_thr_left_out": mean(reps, f"detect_thr_{att}", reps),
+                       "detect_thr_full": mean(full, f"detect_thr_{att}", common),
+                       "fpr_at_val_threshold": mean(reps, "fpr_at_val_threshold", reps),
+                       "detect_left_out": mean(reps, f"detect_{att}", reps),
+                       "detect_full": mean(full, f"detect_{att}", common),
+                       "fpr_pred": mean(reps, "fpr_pred", reps)}
+                rep["loao"].append(row)
+                print(f"  {g:<7} {base:<10} {att:<24} n={len(reps):<3} threshold: detect {row['detect_thr_left_out']:.3f} "
+                      f"(all attacks {row['detect_thr_full']:.3f}) FPR {row['fpr_at_val_threshold']:.3f} | predicted "
+                      f"class: detect {row['detect_left_out']:.3f} (all attacks {row['detect_full']:.3f}) "
+                      f"FPR {row['fpr_pred']:.3f}")
 
         for m in tested:
             print(f"\n=== {part}: {m}, each model vs {a.ref} (Wilcoxon, Holm within the level)")
