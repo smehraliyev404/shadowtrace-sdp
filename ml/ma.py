@@ -1,8 +1,8 @@
 """Ma (2026) baseline: one graph per request, GCN classifier.
 
 Re-implementation of Ma, "Can Graph-Based Microservice Performance Detection
-Be Used for Microservice Intrusion Detection?", arXiv 2605.24283v1 (preprint;
-notes: ~/academic papers/literature/claude-reading-notes.md, entry 48):
+Be Used for Microservice Intrusion Detection?", arXiv 2605.24283v1, 22 May 2026
+(preprint, not peer-reviewed):
 
   unit       one request trace -> service-level graph: nodes = services in the
              trace, edges = caller/callee service pairs, symmetrised, no edge

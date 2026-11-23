@@ -8,6 +8,9 @@ Prints, per level and k:
   2. model vs the reference model (--ref): paired Wilcoxon signed-rank over the
      shared repetitions (assignment x seed), Holm-corrected within the level,
      one block per metric; detectors only get the binary metrics
+  2b. per attack: share of that attack's windows flagged as any attack
+     (detect_<attack>, also for detectors) and, for classifiers, labelled as
+     exactly that attack (recall_<attack>), mean over repetitions
   3. RQ3: per model, L1 vs L0 and L2 vs L0 on the same repetitions, Wilcoxon,
      Holm-corrected over all (model, level) pairs of that metric
 A model with fewer than 5 shared repetitions gets no p-value (too few pairs).
@@ -26,7 +29,7 @@ import json
 import numpy as np
 from scipy.stats import wilcoxon
 
-from ml.metrics import compare, holm
+from ml.metrics import ATTACK_CLASSES, compare, holm
 
 METRICS = ("macro_f1", "binary_f1", "pr_auc", "pauc_1fpr", "tpr_at_1fpr_val", "fpr_at_val_threshold")
 TESTED = ("macro_f1", "binary_f1", "pauc_1fpr")
@@ -76,7 +79,7 @@ def main():
         for r in res:
             table.setdefault((r["group"], r["model"]), {})[r["rep"]] = r["metrics"]
         groups = sorted({g for g, _ in table})
-        rep = out.setdefault(part, {"means": [], "vs_ref": {}, "rq3": {}})
+        rep = out.setdefault(part, {"means": [], "vs_ref": {}, "rq3": {}, "per_attack": []})
 
         print(f"\n=== {part}: means over repetitions ({path})")
         print(f"{'group':<7} {'model':<22} {'reps':>4}  " + "  ".join(f"{m:>19}" for m in METRICS))
@@ -93,6 +96,23 @@ def main():
                     cells.append(f"{'–':>19}")
             rep["means"].append(row)
             print(f"{g:<7} {model:<22} {len(reps):>4}  " + "  ".join(f"{c:>19}" for c in cells))
+
+        short = {c: c.replace("http_flood", "flood").replace("session_rotation_brute", "sess_rot").replace("lateral_movement", "lateral")
+                 .replace("exfiltration", "exfil")[:9] for c in ATTACK_CLASSES}
+        for kind in ("detect", "recall"):
+            print(f"\n=== {part}: per attack, {kind} (share of the attack's windows "
+                  + ("flagged as any attack" if kind == "detect" else "labelled as that attack") + "), mean")
+            print(f"{'group':<7} {'model':<22} " + " ".join(f"{short[c]:>9}" for c in ATTACK_CLASSES))
+            for (g, model), reps in sorted(table.items()):
+                vals = []
+                for c in ATTACK_CLASSES:
+                    v = np.array([x.get(f"{kind}_{c}", np.nan) for x in reps.values()], float)
+                    vals.append(float(np.nanmean(v)) if (~np.isnan(v)).any() else float("nan"))
+                if all(np.isnan(vals)):
+                    continue
+                rep["per_attack"].append({"group": g, "model": model, "kind": kind,
+                                          **{c: v for c, v in zip(ATTACK_CLASSES, vals)}})
+                print(f"{g:<7} {model:<22} " + " ".join(f"{'–':>9}" if np.isnan(v) else f"{v:>9.3f}" for v in vals))
 
         for m in tested:
             print(f"\n=== {part}: {m}, each model vs {a.ref} (Wilcoxon, Holm within the level)")

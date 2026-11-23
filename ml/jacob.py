@@ -2,8 +2,7 @@
 
 Re-implementation of Jacob, Qiao, Ye & Lee, "Anomalous distributed traffic:
 Detecting cyber security attacks amongst microservices using graph
-convolutional networks", Computers & Security 118 (2022) 102728 (notes:
-~/academic papers/literature/claude-reading-notes.md, entry 2):
+convolutional networks", Computers & Security 118 (2022) 102728:
 
   nodes      source -> destination RPC pairs, each end "service + operation",
              within and across services, "-" as the source of a root (their
