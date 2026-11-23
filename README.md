@@ -88,8 +88,9 @@ ml/
   run_grid.py              runs the whole experiment grid in priority order, resumable
 splits/batch3.json         the fixed split of batch 3
 experiments/parallel_runs/ test of whether a second cluster changes latency
-analytics/, DB/, collector/  earlier work (see docs/mongodb.md)
+DB/, collector/             planned MongoDB store and in-Collector redaction (later work; docs/mongodb.md)
 docs/                      user design, MongoDB setup
+docs/results/              final results of batch 3 (snapshot, 23 Nov 2026), see "Results"
 ```
 
 ## Setup
@@ -176,7 +177,6 @@ runs only.
 ./venv/bin/python -m ml.metrics results/*_k3_a*_s*/predictions.parquet --part test --n-boot 0 --out results/metrics_k3_test.json
 ./venv/bin/python -m ml.summary results/metrics_k3_test.json --ref stgnn   # means ± sd, Wilcoxon + Holm vs stgnn, RQ3 level vs L0
 ./venv/bin/python -m ml.probes --split splits/batch3.json --assignment 0   # one-feature shortcut probes, L0/L1 content drift
-# --l0-redacted (any model CLI, probes): L0 takes c_redacted from L1 (PLAN.md D19); default in ml/data.py L0_REDACTED
 ./venv/bin/python -m ml.train --model stgnn --split splits/batch3.json --leave-out ssrf_probe   # leave-one-attack-out
 ./venv/bin/python -m ml.rules --split splits/batch3.json --assignment 0            # rule detectors (volume, errors, auth failures, new edges, latency, any)
 ./venv/bin/python -m ml.ci results/*_k3_a*_s*/predictions.parquet --part heldout --jobs 16   # two-level bootstrap 95 % CIs
@@ -209,6 +209,22 @@ compares models only within one level and k. Every regular run is the test run i
 exactly one of the five assignments; held-out runs are only ever tested on.
 Normalisation and vocabularies are fitted on the training runs of each
 assignment.
+
+## Results
+
+`docs/results/` holds the final outputs of batch 3 (78 runs, 23 Nov 2026), so the
+numbers can be read without re-running anything:
+
+- `summary_all.json` / `summary_all.log`: written by `ml.summary` over every
+  training (main grid with 5 assignments x 5 seeds, k = 1, 3, 5, 10, ablations,
+  leave-one-attack-out, rule detectors): means, per-attack detection, Wilcoxon +
+  Holm tests with per-assignment consistency, and the L1/L2 vs L0 comparisons
+- `ci_k3_test.json`, `ci_k3_heldout.json`: 95 % intervals from `ml.ci`
+- `pii_by_service_batch3.json`: personal values per service and field at L0 and
+  L1, from `scripts/pii_by_service.py`
+
+The per-window predictions behind them (about 12 GB, `results/` on the lab
+machine) are not in the repository.
 
 ## Gates
 

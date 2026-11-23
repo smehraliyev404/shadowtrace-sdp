@@ -1,4 +1,4 @@
-"""Phase 6 models and evaluation (see README "Models").
+"""Models and evaluation (see README "Models").
 
 torch and LightGBM must not run in the same process: on macOS (arm64) each
 loads its own OpenMP runtime (@rpath/libomp.dylib), and whichever is imported

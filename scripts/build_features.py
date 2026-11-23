@@ -68,7 +68,7 @@ from redact import ALLOW_HEADERS, ALLOW_KEYS, CARD_CANDIDATE, FORM, PATTERNS, PI
 
 HMAC_TOKEN = re.compile(r"H_[a-p]{16}")
 
-# ---- content features (per span, then per node and window); see PLAN.md Phase 5
+# ---- content features (per span, then per node and window)
 CONTENT_FEATURES = ("c_inject", "c_url_param", "c_ids_log", "c_paths_log", "c_resp_log", "c_redacted")
 REQUEST_KEYS = ("url.path", "http.target", "url.query", "http.url", "url.full", "http.request.body")
 INJECT = re.compile(r"'|--|;|/\*|\b(union|select|drop|insert|waitfor|sleep)\b|\bor\s+'?\d|\.\./|/etc/", re.I)

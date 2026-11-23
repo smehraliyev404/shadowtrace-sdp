@@ -1,4 +1,4 @@
-"""Shortcut probes and the L0-vs-L1 content check (PLAN.md §11 robustness).
+"""Shortcut probes and the L0-vs-L1 content check (robustness checks).
 
     ./venv/bin/python -m ml.probes --split splits/batch3.json --assignment 0 --levels L0,L1,L2
 
@@ -131,20 +131,19 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     for level in a.levels.split(","):
         t0 = time.time()
-        raw = {p: load_runs(r, level, a.features_dir, a.l0_redacted) for p, r in runs.items() if r}
+        raw = {p: load_runs(r, level, a.features_dir) for p, r in runs.items() if r}
         prep = Prep.fit(raw["train"])
         data = {p: build(w, prep, k=a.k) for p, w in raw.items()}
         names = prep.flat_names
         res = {"level": level, "k": a.k, "assignment": a.assignment if a.split else None, "seed": a.seed,
-               "l0_redacted": bool(a.l0_redacted), "runs": {p: r for p, r in runs.items()}, "n_features": len(names),
+               "runs": {p: r for p, r in runs.items()}, "n_features": len(names),
                "windows": {p: int(len(d)) for p, d in data.items()}}
         res["one_feature"] = one_feature_probes(data, names, a.seed)
         if "test" in data and len(data["test"]):
             res["best_feature_per_attack_test"] = best_feature_per_attack(data["test"], names)
         if level != "L2":
             res["content"] = content_check(data, names, a.seed)
-        tag = "_l0redacted" if a.l0_redacted and level == "L0" else ""
-        path = os.path.join(out_dir, f"probes_{level}_k{a.k}_a{res['assignment'] if a.split else 'x'}{tag}.json")
+        path = os.path.join(out_dir, f"probes_{level}_k{a.k}_a{res['assignment'] if a.split else 'x'}.json")
         json.dump(res, open(path, "w"), indent=1)
 
         print(f"\n=== {level} k{a.k}: {len(names)} flat features, windows {res['windows']} ({time.time() - t0:.0f} s)")

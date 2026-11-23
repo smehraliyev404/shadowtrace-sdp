@@ -14,7 +14,7 @@ features once the run split is known:
 The reference ("what is normal") is fitted only on training windows without
 any attack trace (label_k1 == "normal"), including the normal windows of
 attack runs. Attack windows would pull the mean and std towards the attack
-and mark attack-only edges as seen (PLAN.md Phase 5). Attack windows are used
+and mark attack-only edges as seen. Attack windows are used
 by the classifier, not here. Edges never seen in normal training windows get
 lat z = 0 and seen = 0.
 

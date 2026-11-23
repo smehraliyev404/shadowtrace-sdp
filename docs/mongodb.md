@@ -1,10 +1,12 @@
 # MongoDB team database (spring term)
 
 Status: not used by the current pipeline. The collection pipeline writes plain
-files under `data/` (see the README). This setup is kept for the `DB/` scripts,
-which still label traces from the per-run burst log `data/runs/<run_id>.json`;
-the current ground truth is the origin log `data/runs/<run_id>/origin.jsonl`
-(per-request labels by trace ID). The local `mongodb` and `otel-collector`
+files under `data/` (see the README). The schemas in `DB/Schemas/` and the
+database setup scripts are kept for the spring term. The old import script
+(`ingest_traces.py`, which labelled traces from a per-run burst log) was removed;
+a spring import must use the current ground truth, the origin log
+`data/runs/<run_id>/origin.jsonl` (per-request labels by trace ID). Sections
+below that mention `ingest_traces.py` describe that removed script. The local `mongodb` and `otel-collector`
 services in `docker-compose.yml` start only with `--profile spring`.
 
 ## 1. Creating the shared Atlas cluster (one-time, do this once as a team)

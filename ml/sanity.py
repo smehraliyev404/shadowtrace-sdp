@@ -1,4 +1,4 @@
-"""Phase 6 sanity checks (PLAN.md Phase 6). Run before trusting any result.
+"""Sanity checks. Run before trusting any result.
 
     ./venv/bin/python -m ml.sanity --train run_03 --eval leak_02          # laptop
     ./venv/bin/python -m ml.sanity --split splits/batch3.json --assignment 0  # lab
@@ -132,7 +132,7 @@ def fit_eval_gnn(tr, ev, prep, labels, seed, epochs=60):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Phase 6 sanity checks")
+    ap = argparse.ArgumentParser(description="sanity checks")
     ap.add_argument("--split")
     ap.add_argument("--assignment", type=int, default=0)
     ap.add_argument("--train", nargs="+")

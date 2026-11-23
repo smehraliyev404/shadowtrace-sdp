@@ -17,7 +17,7 @@ convolutional networks", Computers & Security 118 (2022) 102728:
              cells, encoder-decoder, 2 layers x 150 units; Adam, lr 0.01 with
              decay ratio 0.1, MAE loss, up to 50 epochs, early stopping 15
              (§4.6-4.8, §5.4, Fig. 3); forecasts the next window (one step, §5.4)
-  training   normal windows only (self-supervised, no attack labels; PLAN.md C3)
+  training   normal windows only (self-supervised, no attack labels)
   detection  per-node forecast error outside mu_i +- 2 sigma_i (§4.9); mu and
              sigma from validation normal windows. Window score =
              max_i |e_i - mu_i| / sigma_i, flagged if > 2.
@@ -201,7 +201,7 @@ def main():
     name, out = results_dir(a, model_name)          # before training
     set_seed(a.seed)
     t0 = time.time()
-    win = {p: load_runs(r, a.level, a.features_dir, a.l0_redacted) for p, r in runs.items() if r}
+    win = {p: load_runs(r, a.level, a.features_dir) for p, r in runs.items() if r}
     if "op_edges" not in win["train"]:
         raise SystemExit("windows.parquet has no op_edges: rebuild the features with build_features.py")
     pairs, A = build_graph(win["train"])

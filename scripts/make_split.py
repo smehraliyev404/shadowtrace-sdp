@@ -8,7 +8,7 @@ Run types come from the queue flags (as run_queue.py reads them):
     held-out attack  --held-out       unseen load and attack settings
     held-out normal  --held-out --normal
 
-Five run assignments (PLAN.md §11, "5 seeds x 5 run assignments"): attack and
+Five run assignments (each model runs 5 seeds x 5 run assignments): attack and
 normal runs are each shuffled once (fixed seed) and cut into 5 equal groups.
 Assignment i uses group i as test, group i+1 (mod 5) as validation and the
 other three as training, so every run is a test run exactly once and the

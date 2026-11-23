@@ -1,4 +1,4 @@
-"""Evaluation harness (PLAN.md §11).
+"""Evaluation harness.
 
 Per prediction file (one model, one assignment, one seed; written by train.py):
     macro_f1, mcc, pr_auc (macro one-vs-rest average precision), per-attack recall,

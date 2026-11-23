@@ -15,9 +15,9 @@ edge vocabularies, feature scaling) is fitted on the TRAINING runs only, by
     ds.flat           [N, F] flat features of the sample's last window
 
 A sample is one complete, non-excluded window w together with the T - 1
-windows before it in the same run (PLAN.md §8: T = 12). Sequences never cross
+windows before it in the same run (T = 12). Sequences never cross
 runs. Options: `use_seen=False` zeroes the "seen" edge feature, and
-`use_content=False` zeroes the node content features (PLAN.md §11 ablations).
+`use_content=False` zeroes the node content features (ablations).
 """
 
 import os
@@ -44,12 +44,6 @@ WINDOW_FEATURES = ("n_traces", "n_spans", "n_calls", "n_edges", "n_patterns",
 LOG_WINDOW = {"n_traces", "n_spans", "n_calls", "n_edges", "n_patterns", "trace_p50_us", "trace_p95_us"}
 OTHER = "<other>"
 FEATURES_DIR = os.path.join(PROJECT_ROOT, "data", "features")
-# D19: at L0 the node feature c_redacted is 0 by construction (nothing is redacted),
-# so L1 had a signal L0 lacked. With this on, L0 takes each node's c_redacted from
-# the L1 windows of the same run: the share of values the L1 redactor WOULD replace,
-# computable from the raw L0 spans by the same rules. On since 19 Nov (every L0 result
-# retrained; the earlier L0 results, without it, are in results_old_L0/ on the lab).
-L0_REDACTED = True
 
 
 def _read(run_ids, level, d):
@@ -75,11 +69,14 @@ def with_l1_redacted(w0, w1):
     return w0
 
 
-def load_runs(run_ids, level="L2", features_dir=None, l0_redacted=None):
-    """l0_redacted: None = L0_REDACTED (only matters for level L0)."""
+def load_runs(run_ids, level="L2", features_dir=None):
+    """At L0 the node feature c_redacted is 0 by construction (nothing is redacted),
+    so it is taken from the L1 windows of the same run: the share of values the L1
+    redactor would replace, computable from the raw spans by the same rules. Without
+    this L1 would carry a signal L0 lacks and the levels would not be nested."""
     d = features_dir or FEATURES_DIR
     w = _read(run_ids, level, d)
-    if level == "L0" and (L0_REDACTED if l0_redacted is None else l0_redacted):
+    if level == "L0":
         w = with_l1_redacted(w, _read(run_ids, "L1", d)[["run_id", "window", "nodes"]])
     return w.sort_values(["run_id", "window"]).reset_index(drop=True)
 
@@ -99,7 +96,7 @@ class Prep:
     def fit(cls, train):
         p = cls()
         p.train_runs = sorted(train["run_id"].unique())
-        p.edge_stats = fit_edges(train)                       # normal windows only (D14)
+        p.edge_stats = fit_edges(train)                       # normal windows only
         services = set()
         for nodes, edges in zip(train["nodes"], train["edges"]):
             services |= {n["service"] for n in nodes}

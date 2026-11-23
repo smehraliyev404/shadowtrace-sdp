@@ -1,4 +1,4 @@
-"""Window classifiers (PLAN.md §10).
+"""Window classifiers.
 
 ST-GNN: per window, a service embedding plus the node features, plus the mean
 of the node's incoming and outgoing edge features (so GCN and GraphSAGE, which

@@ -38,7 +38,7 @@ for s in $IMAGES; do
   [ "$s" = cartservice ] && ctx="$SRC/cartservice/src"   # its Dockerfile lives in src/
   [ -d "$ctx" ] || { echo "[build] no source folder $ctx"; exit 1; }
   echo "[build] shadowtrace/${s}:latest"
-  # minikube image build can exit 0 on a failed build (C16), and checking that
+  # minikube image build can exit 0 on a failed build, and checking that
   # ":latest" exists would pass on the OLD image. So build under a one-off tag
   # that only exists if THIS build worked, then point :latest at it.
   # zsh/bash note: keep the braces, a bare $s:latest is mangled by zsh's :l modifier

@@ -9,7 +9,7 @@
 Models: stgnn (GATv2, main), stgnn_gcn, stgnn_sage, rf, gbm, mlp, svm (flat
 baselines tuned by grid search on the validation runs, ml/models.py GRIDS).
 Ablations: --no-seen (edge feature "seen" = 0), --no-content (node content features = 0).
-Training (PLAN.md §10): class-weighted cross-entropy, Adam lr 0.001, early
+Training: class-weighted cross-entropy, Adam lr 0.001, early
 stopping on validation macro-F1. Normalisation and vocabularies come from the
 training runs only (ml/data.py Prep).
 
@@ -28,7 +28,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 
-from ml.data import CLASSES, L0_REDACTED, NODE_FEATURES, PROJECT_ROOT, Prep, build, load_runs
+from ml.data import CLASSES, NODE_FEATURES, PROJECT_ROOT, Prep, build, load_runs
 from ml.metrics import macro_f1
 from ml.models import DEFAULTS, GRIDS, STGNN, class_weights, make_flat, resolve_device
 
@@ -176,14 +176,11 @@ def add_split_args(ap):
     ap.add_argument("--out-dir", default=os.path.join(PROJECT_ROOT, "results"))
     ap.add_argument("--overwrite", action="store_true", help="replace an existing results folder")
     ap.add_argument("--device", default="auto", help="auto (CUDA if available, else CPU), cpu, cuda, mps")
-    ap.add_argument("--l0-redacted", action=argparse.BooleanOptionalAction, default=L0_REDACTED,
-                    help="L0 only: c_redacted from the L1 windows (D19); default from ml/data.py L0_REDACTED")
 
 
 # arguments that say WHICH data a result is for; every other argument is a model setting
 DATA_ARGS = {"help", "split", "assignment", "train", "val", "test", "heldout", "allow_overlap", "level", "k",
-             "seed", "out_dir", "overwrite", "features_dir", "name", "model", "no_seen", "no_content", "device",
-             "l0_redacted"}
+             "seed", "out_dir", "overwrite", "features_dir", "name", "model", "no_seen", "no_content", "device"}
 
 
 def variant(ap, a):
@@ -252,7 +249,7 @@ def main():
     name, out = results_dir(a, model_name)          # before training: refuse early, not after an hour
     set_seed(a.seed)
     t0 = time.time()
-    windows = {p: load_runs(r, a.level, a.features_dir, a.l0_redacted) for p, r in runs.items() if r}
+    windows = {p: load_runs(r, a.level, a.features_dir) for p, r in runs.items() if r}
     left_out = {}
     if a.leave_out:              # the model must never see a trace of this attack (not even in "seen" edges)
         for p in ("train", "val"):

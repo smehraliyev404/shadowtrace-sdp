@@ -1,4 +1,4 @@
-"""Run the experiment grid (PLAN.md §11) in priority order, unattended.
+"""Run the experiment grid in priority order, unattended.
 
     ./venv/bin/python -m ml.run_grid --dry-run                       # show the plan
     ./venv/bin/python -m ml.run_grid --stages main --jobs 4          # first full table
@@ -8,7 +8,7 @@ Stages (each is a list of trainings; one training = one model, level, k,
 assignment and seed, run by ml.train / ml.jacob / ml.ma):
 
   batching   ST-GNN with --batching run vs random, assignment 0, seed 1, L2
-             (the one decision PLAN.md asks for before the full runs)
+             (decided before the full runs)
   main       k = 3, seed 1, all 5 assignments: ST-GNN (GATv2, GCN, SAGE), RF,
              LightGBM, MLP, SVM and Ma at L0, L1, L2; Jacob once (its input,
              operation-pair counts, is the same at every level) -> the first table

@@ -1,4 +1,4 @@
-"""Paper tables from the JSON written by ml.metrics --out (PLAN.md §11).
+"""Paper tables from the JSON written by ml.metrics --out.
 
     ./venv/bin/python -m ml.metrics results/*_k3_a*_s*/predictions.parquet --part test --n-boot 0 --out results/metrics_k3_test.json
     ./venv/bin/python -m ml.summary results/metrics_k3_test.json --ref stgnn

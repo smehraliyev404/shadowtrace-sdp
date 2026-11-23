@@ -12,7 +12,7 @@ Be Used for Microservice Intrusion Detection?", arXiv 2605.24283v1, 22 May 2026
              paper's trace variant) + 16 TF-IDF dimensions of text (§4: log
              TF-IDF). We have no logs or container metrics; the text is the
              node's span attributes at that level, so it is empty at L2
-             (PLAN.md §10: "+ attribute text at L0/L1"). Adaptation: the 16
+             (our text input: attribute text at L0/L1). Adaptation: the 16
              terms are chosen by chi2 against the training labels (from a
              TF-IDF vocabulary without terms in > 50 % of nodes; punctuation
              runs are tokens). With plain top-16 frequency all terms were
@@ -21,7 +21,7 @@ Be Used for Microservice Intrusion Detection?", arXiv 2605.24283v1, 22 May 2026
   model      2-layer GCN, mean pooling, MLP (§4)
   labels     the trace's own provenance label (the paper used trace-window overlap)
 
-Training follows our protocol (PLAN.md §10: class-weighted CE, Adam 0.001,
+Training follows our protocol (as ml/train.py: class-weighted CE, Adam 0.001,
 early stopping on validation macro-F1), not the paper's 5 or 100 epochs.
 Training and validation traces are subsampled per class (--max-per-class);
 test and held-out runs are scored on every trace.

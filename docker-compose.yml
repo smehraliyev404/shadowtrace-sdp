@@ -4,7 +4,7 @@ services:
     # we have been running; it has the in-memory --memory.max-traces cap.
     image: jaegertracing/all-in-one:1.76.0
     container_name: shadowtrace-jaeger
-    # Trace cap (PLAN.md Phase 2): bounded memory instead of unbounded growth.
+    # Trace cap: bounded memory instead of unbounded growth.
     # When full, Jaeger silently evicts the OLDEST traces, so the harvester fails
     # the run if it gets near this number (harvest_traces.py --jaeger-cap).
     # Keep JAEGER_MAX_TRACES identical here and in the harvester's environment.

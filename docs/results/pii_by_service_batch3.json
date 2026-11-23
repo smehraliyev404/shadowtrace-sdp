@@ -1,0 +1,228 @@
+{
+ "runs": 78,
+ "traces_with_pii": 5453949,
+ "services": [
+  {
+   "service": "frontend",
+   "exposed_total": 6841554,
+   "still_in_l1_total": 7039,
+   "fields": 15,
+   "exposed": {
+    "session_id": 4997006,
+    "email": 145907,
+    "phone": 145907,
+    "user_id": 145907,
+    "street": 145907,
+    "city": 145907,
+    "state": 86639,
+    "zip": 145907,
+    "country": 145907,
+    "card": 145907,
+    "card_masked": 145907,
+    "payment_token": 145907,
+    "session_token": 145907,
+    "jwt": 145907,
+    "card_exp": 7025
+   },
+   "still_in_l1": {
+    "card_exp": 7025,
+    "zip": 14
+   },
+   "top_keys": {
+    "enduser.id": 54415761,
+    "http.request.header.cookie": 4997018,
+    "http.request.body": 1112561,
+    "user.email": 1094949,
+    "url.query": 291823,
+    "http.request.header.x-user-email": 150479,
+    "http.request.header.x-card-display": 145927,
+    "http.request.header.authorization": 145920
+   }
+  },
+  {
+   "service": "cartservice",
+   "exposed_total": 4907859,
+   "still_in_l1_total": 8,
+   "fields": 4,
+   "exposed": {
+    "session_id": 4764639,
+    "email": 138849,
+    "user_id": 4351,
+    "zip": 20
+   },
+   "still_in_l1": {
+    "zip": 8
+   },
+   "top_keys": {
+    "enduser.id": 10780753,
+    "db.statement": 5884267,
+    "user.email": 558330,
+    "server.port": 16
+   }
+  },
+  {
+   "service": "productcatalogservice",
+   "exposed_total": 4889122,
+   "still_in_l1_total": 3,
+   "fields": 4,
+   "exposed": {
+    "session_id": 4745907,
+    "email": 138849,
+    "user_id": 4351,
+    "zip": 15
+   },
+   "still_in_l1": {
+    "zip": 3
+   },
+   "top_keys": {
+    "enduser.id": 24208546,
+    "user.email": 1253808,
+    "server.port": 21
+   }
+  },
+  {
+   "service": "currencyservice",
+   "exposed_total": 3901338,
+   "still_in_l1_total": 0,
+   "fields": 4,
+   "exposed": {
+    "session_id": 3758126,
+    "email": 138849,
+    "user_id": 4351,
+    "zip": 12
+   },
+   "still_in_l1": {},
+   "top_keys": {
+    "enduser.id": 17815551,
+    "user.email": 717187
+   }
+  },
+  {
+   "service": "recommendationservice",
+   "exposed_total": 3046328,
+   "still_in_l1_total": 7,
+   "fields": 4,
+   "exposed": {
+    "session_id": 2910345,
+    "email": 131824,
+    "user_id": 4141,
+    "zip": 18
+   },
+   "still_in_l1": {
+    "zip": 7
+   },
+   "top_keys": {
+    "enduser.id": 5820712,
+    "user.email": 271930,
+    "net.peer.port": 7
+   }
+  },
+  {
+   "service": "shippingservice",
+   "exposed_total": 1529308,
+   "still_in_l1_total": 6,
+   "fields": 4,
+   "exposed": {
+    "session_id": 1386090,
+    "email": 138849,
+    "user_id": 4351,
+    "zip": 18
+   },
+   "still_in_l1": {
+    "zip": 6
+   },
+   "top_keys": {
+    "enduser.id": 1517937,
+    "user.email": 279165,
+    "server.port": 12
+   }
+  },
+  {
+   "service": "checkoutservice",
+   "exposed_total": 926987,
+   "still_in_l1_total": 7041,
+   "fields": 9,
+   "exposed": {
+    "session_id": 138849,
+    "email": 138849,
+    "street": 138849,
+    "city": 138849,
+    "state": 82517,
+    "zip": 138849,
+    "country": 138849,
+    "card_exp": 7025,
+    "user_id": 4351
+   },
+   "still_in_l1": {
+    "card_exp": 7025,
+    "zip": 16
+   },
+   "top_keys": {
+    "user.email": 1999941,
+    "enduser.id": 1940186,
+    "shipping.city": 180305,
+    "shipping.street_address": 138849,
+    "shipping.zip_code": 138849,
+    "shipping.country": 138849,
+    "shipping.state": 128135,
+    "otel.status_description": 14050
+   }
+  },
+  {
+   "service": "authservice",
+   "exposed_total": 403260,
+   "still_in_l1_total": 0,
+   "fields": 1,
+   "exposed": {
+    "username": 403260
+   },
+   "still_in_l1": {},
+   "top_keys": {
+    "enduser.id": 403260
+   }
+  },
+  {
+   "service": "paymentservice",
+   "exposed_total": 289086,
+   "still_in_l1_total": 7025,
+   "fields": 5,
+   "exposed": {
+    "session_id": 138849,
+    "email": 138849,
+    "card_exp": 7025,
+    "user_id": 4351,
+    "zip": 12
+   },
+   "still_in_l1": {
+    "card_exp": 7025
+   },
+   "top_keys": {
+    "user.email": 143200,
+    "enduser.id": 138861,
+    "grpc.error_message": 7025,
+    "otel.status_description": 7025
+   }
+  },
+  {
+   "service": "emailservice",
+   "exposed_total": 267806,
+   "still_in_l1_total": 6,
+   "fields": 4,
+   "exposed": {
+    "session_id": 131824,
+    "email": 131824,
+    "user_id": 4141,
+    "zip": 17
+   },
+   "still_in_l1": {
+    "zip": 6
+   },
+   "top_keys": {
+    "email.to": 135965,
+    "user.email": 135965,
+    "enduser.id": 131835,
+    "net.peer.port": 6
+   }
+  }
+ ]
+}
