@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from provenance import add_origin_args, origin_log_from_args  # noqa: E402
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-LATERAL_PY = os.path.join(PROJECT_ROOT, "..", "microservices-demo-main", "src", "attacker", "lateral.py")
+LATERAL_PY = os.path.join(PROJECT_ROOT, "..", "shadowtrace-testbed", "src", "attacker", "lateral.py")
 OTLP = "http://host.minikube.internal:4317"
 
 # where the code runs, and the environment it needs there

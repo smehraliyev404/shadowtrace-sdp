@@ -6,7 +6,7 @@ This repository holds the data-collection pipeline: normal traffic, eight attack
 types, trace harvesting, per-request ground truth and the checks that gate every
 run. The testbed (a modified Google Online Boutique with tracing in every service,
 three extra services and realistic leak channels) is a separate repository,
-expected next to this one as `../microservices-demo-main/`.
+expected next to this one as `../shadowtrace-testbed/`.
 
 ## How a run is labelled
 
@@ -76,6 +76,8 @@ scripts/
   edge_norm.py             edge features, normalised on normal training windows
   pii_audit.py             L1 recall and precision against the origin pii ground truth
   make_split.py            fixed run-level split (5 assignments) -> splits/
+  batch_report.py          dataset totals and L1 audit over a whole queue
+  pii_by_service.py        personal values per service and field, L0 and L1
 ml/
   data.py                  windows.parquet -> graph sequences and flat vectors
   models.py                ST-GNN (GATv2 / GCN / SAGE) and flat baselines
@@ -86,6 +88,10 @@ ml/
   metrics.py               metrics, block-bootstrap CIs, Wilcoxon + Holm
   sanity.py                checks to pass before trusting results
   run_grid.py              runs the whole experiment grid in priority order, resumable
+  summary.py               means, model comparisons, per-attack and level tests
+  ci.py                    two-level bootstrap confidence intervals
+  probes.py                one-feature shortcut probes, content drift check
+  rules.py                 rule detectors (login failures, error shares, new edges, ...)
 splits/batch3.json         the fixed split of batch 3
 experiments/parallel_runs/ test of whether a second cluster changes latency
 DB/, collector/             planned MongoDB store and in-Collector redaction (later work; docs/mongodb.md)
@@ -107,7 +113,7 @@ Cluster (once; images use `imagePullPolicy: Never`, so they are built into minik
 ```bash
 minikube start --driver=docker
 ./build_images.sh
-kubectl apply -f ../microservices-demo-main/release/kubernetes-manifests.yaml
+kubectl apply -f ../shadowtrace-testbed/release/kubernetes-manifests.yaml
 kubectl wait --for=condition=Ready pod --all --timeout=600s
 ```
 
@@ -244,11 +250,14 @@ A run fails, and the queue stops, if any of these fails:
 
 ## References
 
-1. Ma, Y. (2026). *Can Graph-Based Microservice Performance Detection Be Used for Microservice Intrusion Detection?* arXiv:2605.24283.
-2. Chen, J. et al. (2023). *TraceGra: A trace-based anomaly detection for microservice using graph deep learning.* Computer Communications.
-3. Sigelman, B. H. et al. (2010). *Dapper, a Large-Scale Distributed Systems Tracing Infrastructure.* Google Technical Report.
-4. Chandramouli, R. (2019). *Security Strategies for Microservices-based Application Systems.* NIST SP 800-204.
-5. Regulation (EU) 2016/679 (GDPR), Articles 4(1), 5(1)(c), 25, 32.
+1. Ma, Y. (2026). *Can Graph-Based Microservice Performance Detection Be Used for Microservice Intrusion Detection?* arXiv:2605.24283. (`ml/ma.py`)
+2. Jacob, S., Qiao, Y., Ye, Y. & Lee, B. (2022). *Anomalous distributed traffic: Detecting cyber security attacks amongst microservices using graph convolutional networks.* Computers & Security 118, 102728. (`ml/jacob.py`)
+3. Osswald, L. et al. (2025). *Anomaly Detection in Microservices Architecture Using Graph Neural Networks.* PDP 2025, IEEE. (grid-search tuning of the flat baselines, `ml/models.py`)
+4. Arp, D. et al. (2022). *Dos and Don'ts of Machine Learning in Computer Security.* USENIX Security 2022. (evaluation: bounded ROC area, precision at low prevalence, `ml/metrics.py`)
+5. Brody, S., Alon, U. & Yahav, E. (2022). *How Attentive are Graph Attention Networks?* ICLR 2022. (GATv2, `ml/models.py`)
+6. Sigelman, B. H. et al. (2010). *Dapper, a Large-Scale Distributed Systems Tracing Infrastructure.* Google Technical Report.
+7. Chandramouli, R. (2019). *Security Strategies for Microservices-based Application Systems.* NIST SP 800-204.
+8. Regulation (EU) 2016/679 (GDPR), Articles 4(1), 5(1)(c), 25, 32.
 
 ## License
 

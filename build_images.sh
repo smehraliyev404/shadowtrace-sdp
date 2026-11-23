@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build every image the manifest expects locally (imagePullPolicy: Never) into
 # minikube, so a fresh cluster is one command away:
-#   ./build_images.sh && kubectl apply -f ../microservices-demo-main/release/kubernetes-manifests.yaml
+#   ./build_images.sh && kubectl apply -f ../shadowtrace-testbed/release/kubernetes-manifests.yaml
 #   ./build_images.sh emailservice        # rebuild just one after a code change
 #
 # The 3 stubs are ours. The other 10 are upstream Boutique services with our fixes
@@ -23,7 +23,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-SRC=../microservices-demo-main/src
+SRC=../shadowtrace-testbed/src
 # which minikube cluster: default "minikube"; MINIKUBE_PROFILE=loadgen ./build_images.sh
 # builds into the second cluster of the parallel-runs test
 MK="minikube -p ${MINIKUBE_PROFILE:-minikube}"

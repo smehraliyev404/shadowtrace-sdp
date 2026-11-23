@@ -1,5 +1,5 @@
 {
-  "_comment": "Synthetic people for the lab (RQ1, 14 Nov). Shared by k6_test/normal_traffic.js (shoppers, accounts) and scripts/attacks/* (credential-stuffing usernames), so attack usernames look like real ones. ASCII only (e-mail and username validity). All values fictional.",
+  "_comment": "Synthetic people for the lab (RQ1). Shared by k6_test/normal_traffic.js (shoppers, accounts) and scripts/attacks/* (credential-stuffing usernames), so attack usernames look like real ones. ASCII only (e-mail and username validity). All values fictional.",
   "first_names": ["leyla", "aysel", "nigar", "gunel", "elvin", "rashad", "tural", "kamran", "orkhan", "nurlan",
                   "emre", "zeynep", "elif", "burak", "can", "selin",
                   "anna", "lukas", "jonas", "lea", "felix", "sophie", "max", "mia",

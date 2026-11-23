@@ -25,7 +25,7 @@ cd "$(dirname "$0")/../.."      # repository root
 
 P=loadgen
 CPUS="${CPUS:-12}"
-MANIFESTS=../microservices-demo-main/release/kubernetes-manifests.yaml
+MANIFESTS=../shadowtrace-testbed/release/kubernetes-manifests.yaml
 KB=(kubectl --context "$P")
 PY=./venv/bin/python
 
