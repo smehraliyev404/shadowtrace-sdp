@@ -189,7 +189,7 @@ def ensure_collection(database, name, validator):
 
 
 def ensure_unique_graph_trace_index(database):
-    """graphs.trace_id must be unique so re-running ingest_traces.py can't insert
+    """graphs.trace_id must be unique so re-running an import can't insert
     a trace's graph twice. It used to carry a non-unique "trace_lookup" index; a
     unique index on the same key can't coexist with it, so swap it - but only
     after checking for duplicates, which would make the unique index unbuildable."""
