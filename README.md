@@ -219,6 +219,9 @@ numbers can be read without re-running anything:
   training (main grid with 5 assignments x 5 seeds, k = 1, 3, 5, 10, ablations,
   leave-one-attack-out, rule detectors): means, per-attack detection, Wilcoxon +
   Holm tests with per-assignment consistency, and the L1/L2 vs L0 comparisons
+- `metrics_all_test.json`, `metrics_all_heldout.json`: the metrics of every single
+  training (1,361 each: model, level, k, assignment, seed, 38 metrics), written by
+  `ml.metrics`; `ml.summary` reads these, so any statistic can be redone from them
 - `ci_k3_test.json`, `ci_k3_heldout.json`: 95 % intervals from `ml.ci`
 - `pii_by_service_batch3.json`: personal values per service and field at L0 and
   L1, from `scripts/pii_by_service.py`
