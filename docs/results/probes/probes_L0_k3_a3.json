@@ -1,0 +1,2087 @@
+{
+ "level": "L0",
+ "k": 3,
+ "assignment": 3,
+ "seed": 1,
+ "runs": {
+  "train": [
+   "a3_02",
+   "a3_03",
+   "a3_04",
+   "a3_05",
+   "a3_06",
+   "a3_07",
+   "a3_08",
+   "a3_09",
+   "a3_10",
+   "a3_11",
+   "a3_12",
+   "a3_15",
+   "a3_16",
+   "a3_18",
+   "a3_20",
+   "a3_24",
+   "a3_27",
+   "a3_29",
+   "a3_30",
+   "a3_31",
+   "a3_32",
+   "a3_37",
+   "a3_38",
+   "a3_39",
+   "n3_02",
+   "n3_03",
+   "n3_04",
+   "n3_09",
+   "n3_10",
+   "n3_11",
+   "n3_12",
+   "n3_14",
+   "n3_15",
+   "n3_17",
+   "n3_18",
+   "n3_20",
+   "n3_21",
+   "n3_22",
+   "n3_23",
+   "n3_24",
+   "n3_26",
+   "n3_28"
+  ],
+  "val": [
+   "a3_01",
+   "a3_14",
+   "a3_21",
+   "a3_22",
+   "a3_26",
+   "a3_33",
+   "a3_36",
+   "a3_40",
+   "n3_01",
+   "n3_07",
+   "n3_08",
+   "n3_19",
+   "n3_27",
+   "n3_29"
+  ],
+  "test": [
+   "a3_13",
+   "a3_17",
+   "a3_19",
+   "a3_23",
+   "a3_25",
+   "a3_28",
+   "a3_34",
+   "a3_35",
+   "n3_05",
+   "n3_06",
+   "n3_13",
+   "n3_16",
+   "n3_25",
+   "n3_30"
+  ],
+  "heldout": [
+   "h3_01",
+   "h3_02",
+   "h3_03",
+   "h3_04",
+   "h3_05",
+   "hn3_01",
+   "hn3_02",
+   "hn3_03"
+  ]
+ },
+ "n_features": 374,
+ "windows": {
+  "train": 2066,
+  "val": 720,
+  "test": 704,
+  "heldout": 439
+ },
+ "one_feature": [
+  {
+   "feature": "n_authservice_c_redacted",
+   "test_macro_f1": 0.36879023762349833,
+   "test_binary_f1": 0.7519312606727564,
+   "heldout_macro_f1": 0.2723484177887571,
+   "heldout_binary_f1": 0.7316378316032295
+  },
+  {
+   "feature": "w_server_err",
+   "test_macro_f1": 0.29929520343580857,
+   "test_binary_f1": 0.526086983875331,
+   "heldout_macro_f1": 0.2562930464618325,
+   "heldout_binary_f1": 0.580627985279148
+  },
+  {
+   "feature": "w_client_err",
+   "test_macro_f1": 0.27772018453977826,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.057555266835961336,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_currencyservice_c_redacted",
+   "test_macro_f1": 0.26311929215913366,
+   "test_binary_f1": 0.6646401033466554,
+   "heldout_macro_f1": 0.07804232804232804,
+   "heldout_binary_f1": 0.36575358298659266
+  },
+  {
+   "feature": "w_n_edges",
+   "test_macro_f1": 0.26157627635757347,
+   "test_binary_f1": 0.5841368055346969,
+   "heldout_macro_f1": 0.26964364167122784,
+   "heldout_binary_f1": 0.5752284584980237
+  },
+  {
+   "feature": "n_frontend_c_resp_log",
+   "test_macro_f1": 0.2527544548693556,
+   "test_binary_f1": 0.4511645213015707,
+   "heldout_macro_f1": 0.031753102146408925,
+   "heldout_binary_f1": 0.32227049772989314
+  },
+  {
+   "feature": "n_frontend_c_redacted",
+   "test_macro_f1": 0.2342930977490735,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.012512512512512513,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "w_trace_p50_us",
+   "test_macro_f1": 0.23005682017887225,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_cartservice_c_redacted",
+   "test_macro_f1": 0.22934070985010577,
+   "test_binary_f1": 0.6803970824127599,
+   "heldout_macro_f1": 0.07934106572533199,
+   "heldout_binary_f1": 0.421550924796252
+  },
+  {
+   "feature": "e_client->frontend_client_err",
+   "test_macro_f1": 0.21357792876058154,
+   "test_binary_f1": 0.5447646470315513,
+   "heldout_macro_f1": 0.1991811045405817,
+   "heldout_binary_f1": 0.5253820826576244
+  },
+  {
+   "feature": "e_frontend->productcatalogservice_client_err",
+   "test_macro_f1": 0.19304897314375985,
+   "test_binary_f1": 0.476369104359384,
+   "heldout_macro_f1": 0.19229446164430686,
+   "heldout_binary_f1": 0.4903250773993808
+  },
+  {
+   "feature": "n_frontend_c_inject",
+   "test_macro_f1": 0.19304897314375985,
+   "test_binary_f1": 0.476369104359384,
+   "heldout_macro_f1": 0.19229446164430686,
+   "heldout_binary_f1": 0.4903250773993808
+  },
+  {
+   "feature": "n_productcatalogservice_err_share",
+   "test_macro_f1": 0.19304897314375985,
+   "test_binary_f1": 0.476369104359384,
+   "heldout_macro_f1": 0.19229446164430686,
+   "heldout_binary_f1": 0.4903250773993808
+  },
+  {
+   "feature": "e_client->ssrfservice_log_count",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "e_client->ssrfservice_server_err",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "e_ssrfservice->authservice_log_count",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "e_ssrfservice->external_log_count",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "e_ssrfservice->external_client_err",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "e_ssrfservice->external_server_err",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "e_ssrfservice->frontend_log_count",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_authservice_c_paths_log",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_n_spans",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_n_server",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_err_share",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_server_p50_us",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_c_inject",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_c_url_param",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_c_ids_log",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_c_paths_log",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_c_resp_log",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "n_ssrfservice_c_redacted",
+   "test_macro_f1": 0.1929713804713805,
+   "test_binary_f1": 0.47348484848484845,
+   "heldout_macro_f1": 0.19179487179487179,
+   "heldout_binary_f1": 0.4727260458839406
+  },
+  {
+   "feature": "e_client->frontend_lat_p50_z",
+   "test_macro_f1": 0.18858322592544124,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_client->ssrfservice_d_log_count",
+   "test_macro_f1": 0.1880446460105719,
+   "test_binary_f1": 0.46474887104934914,
+   "heldout_macro_f1": 0.18433199743681644,
+   "heldout_binary_f1": 0.459186659860473
+  },
+  {
+   "feature": "e_ssrfservice->external_d_log_count",
+   "test_macro_f1": 0.1880446460105719,
+   "test_binary_f1": 0.46474887104934914,
+   "heldout_macro_f1": 0.18433199743681644,
+   "heldout_binary_f1": 0.459186659860473
+  },
+  {
+   "feature": "n_authservice_err_share",
+   "test_macro_f1": 0.18802223701792867,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.04374091187899903,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_frontend_server_p50_us",
+   "test_macro_f1": 0.18759467997875515,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_ssrfservice->authservice_d_log_count",
+   "test_macro_f1": 0.1863132674453429,
+   "test_binary_f1": 0.46180871828236825,
+   "heldout_macro_f1": 0.1663027252427304,
+   "heldout_binary_f1": 0.4311777218838561
+  },
+  {
+   "feature": "e_ssrfservice->frontend_d_log_count",
+   "test_macro_f1": 0.18270497150523737,
+   "test_binary_f1": 0.45588539455493504,
+   "heldout_macro_f1": 0.17284737216775023,
+   "heldout_binary_f1": 0.4406564873929902
+  },
+  {
+   "feature": "e_client->frontend_server_err",
+   "test_macro_f1": 0.18255923300103094,
+   "test_binary_f1": 0.5136842105263157,
+   "heldout_macro_f1": 0.20103487174114237,
+   "heldout_binary_f1": 0.5501977543598864
+  },
+  {
+   "feature": "e_authservice->frontend_log_count",
+   "test_macro_f1": 0.17138680353118727,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.012232415902140673,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_client->authservice_log_count",
+   "test_macro_f1": 0.17138680353118727,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.012232415902140673,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_authservice_n_spans",
+   "test_macro_f1": 0.16900635330000885,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.012204424103737604,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_authservice_c_ids_log",
+   "test_macro_f1": 0.1664253716402101,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.022491322491322494,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_authservice_n_server",
+   "test_macro_f1": 0.16623638221000808,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.012204424103737604,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_client->recommendationservice_log_count",
+   "test_macro_f1": 0.16598366931902409,
+   "test_binary_f1": 0.4408199050699882,
+   "heldout_macro_f1": 0.16964989305414838,
+   "heldout_binary_f1": 0.4359353412544902
+  },
+  {
+   "feature": "e_client->recommendationservice_d_log_count",
+   "test_macro_f1": 0.16598366931902409,
+   "test_binary_f1": 0.4408199050699882,
+   "heldout_macro_f1": 0.16964989305414838,
+   "heldout_binary_f1": 0.4359353412544902
+  },
+  {
+   "feature": "e_recommendationservice->cartservice_d_log_count",
+   "test_macro_f1": 0.16598366931902409,
+   "test_binary_f1": 0.4408199050699882,
+   "heldout_macro_f1": 0.16964989305414838,
+   "heldout_binary_f1": 0.4359353412544902
+  },
+  {
+   "feature": "e_recommendationservice->currencyservice_d_log_count",
+   "test_macro_f1": 0.16598366931902409,
+   "test_binary_f1": 0.4408199050699882,
+   "heldout_macro_f1": 0.16964989305414838,
+   "heldout_binary_f1": 0.4359353412544902
+  },
+  {
+   "feature": "e_recommendationservice->cartservice_log_count",
+   "test_macro_f1": 0.16385923068800815,
+   "test_binary_f1": 0.4377616215025336,
+   "heldout_macro_f1": 0.16964989305414838,
+   "heldout_binary_f1": 0.4359353412544902
+  },
+  {
+   "feature": "e_recommendationservice->currencyservice_log_count",
+   "test_macro_f1": 0.16385923068800815,
+   "test_binary_f1": 0.4377616215025336,
+   "heldout_macro_f1": 0.16964989305414838,
+   "heldout_binary_f1": 0.4359353412544902
+  },
+  {
+   "feature": "e_client->authservice_client_err",
+   "test_macro_f1": 0.16260858789016472,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.028971063904187428,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_recommendationservice_c_redacted",
+   "test_macro_f1": 0.1622674930783504,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.09214525472877366,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->productcatalogservice_lat_p95_z",
+   "test_macro_f1": 0.15985995472002074,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.07310687931089967,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_cartservice_c_ids_log",
+   "test_macro_f1": 0.15489560716144907,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03626003626003626,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_currencyservice_c_ids_log",
+   "test_macro_f1": 0.15489560716144907,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03626003626003626,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_productcatalogservice_c_ids_log",
+   "test_macro_f1": 0.15480420230504657,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03636284552315086,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_frontend_c_ids_log",
+   "test_macro_f1": 0.15462637574231144,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.037148513329104925,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_frontend_err_share",
+   "test_macro_f1": 0.1530228870166213,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.11279824298692225,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_productcatalogservice_c_redacted",
+   "test_macro_f1": 0.14908176208147028,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_currencyservice_n_spans",
+   "test_macro_f1": 0.14806108277492414,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.02976689251199055,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_currencyservice_n_server",
+   "test_macro_f1": 0.14806108277492414,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.02976689251199055,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->adservice_log_count",
+   "test_macro_f1": 0.14594947173894543,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.013041210224308816,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_adservice_n_spans",
+   "test_macro_f1": 0.14594947173894543,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.013041210224308816,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_adservice_n_server",
+   "test_macro_f1": 0.14594947173894543,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.013041210224308816,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_attacker->cartservice_log_count",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "e_attacker->currencyservice_log_count",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "e_attacker->productcatalogservice_log_count",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "e_client->attacker_log_count",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_n_spans",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_n_server",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_err_share",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_server_p50_us",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_c_inject",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_c_url_param",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_c_ids_log",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_c_paths_log",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_c_resp_log",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_attacker_c_redacted",
+   "test_macro_f1": 0.1415667901115985,
+   "test_binary_f1": 0.40952685511673637,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "e_frontend->productcatalogservice_lat_p50_z",
+   "test_macro_f1": 0.13607829245915135,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->currencyservice_lat_p95_z",
+   "test_macro_f1": 0.1345774062273345,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.015042735042735043,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_attacker->cartservice_d_log_count",
+   "test_macro_f1": 0.132566404788627,
+   "test_binary_f1": 0.39981933152664856,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "e_attacker->currencyservice_d_log_count",
+   "test_macro_f1": 0.132566404788627,
+   "test_binary_f1": 0.39981933152664856,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "e_attacker->productcatalogservice_d_log_count",
+   "test_macro_f1": 0.132566404788627,
+   "test_binary_f1": 0.39981933152664856,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "e_client->attacker_d_log_count",
+   "test_macro_f1": 0.132566404788627,
+   "test_binary_f1": 0.39981933152664856,
+   "heldout_macro_f1": 0.13249940686222544,
+   "heldout_binary_f1": 0.39173778039890006
+  },
+  {
+   "feature": "n_authservice_server_p50_us",
+   "test_macro_f1": 0.13225517899746167,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.026826826826826827,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_frontend_n_server",
+   "test_macro_f1": 0.13183988054578558,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.0145472786556308,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->currencyservice_log_count",
+   "test_macro_f1": 0.1304741202378948,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.02094017094017094,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_client->frontend_log_count",
+   "test_macro_f1": 0.1271774206758727,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.013770180436847104,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_frontend_c_paths_log",
+   "test_macro_f1": 0.12474487341163124,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.12484108822781592,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_currencyservice_server_p50_us",
+   "test_macro_f1": 0.12295067891478555,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "w_n_traces",
+   "test_macro_f1": 0.12278147145406305,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.013770180436847104,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_client->authservice_lat_p50_z",
+   "test_macro_f1": 0.1218720723338611,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.029201418847665608,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_productcatalogservice_server_p50_us",
+   "test_macro_f1": 0.120214933716464,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->currencyservice_lat_p50_z",
+   "test_macro_f1": 0.11883714750647435,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->currencyservice_d_log_count",
+   "test_macro_f1": 0.11787035599532336,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.025864875864875864,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->recommendationservice_lat_p50_z",
+   "test_macro_f1": 0.11612740399143057,
+   "test_binary_f1": 0.3507099662963729,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_recommendationservice_server_p50_us",
+   "test_macro_f1": 0.11612740399143057,
+   "test_binary_f1": 0.3507099662963729,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->cartservice_lat_p95_z",
+   "test_macro_f1": 0.11558368458064505,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.039468917629837175,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "w_n_patterns",
+   "test_macro_f1": 0.10911659215028527,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.14001006568247856,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "w_trace_p95_us",
+   "test_macro_f1": 0.10877045051551565,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.014980895150566411,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_cartservice_server_p50_us",
+   "test_macro_f1": 0.10551035595528203,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.018118585534315872,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_shippingservice_server_p50_us",
+   "test_macro_f1": 0.10434297165542941,
+   "test_binary_f1": 0.5698175565530024,
+   "heldout_macro_f1": 0.08030712578838092,
+   "heldout_binary_f1": 0.44522212501215125
+  },
+  {
+   "feature": "e_frontend->shippingservice_lat_p50_z",
+   "test_macro_f1": 0.10303069383674468,
+   "test_binary_f1": 0.5735848751847394,
+   "heldout_macro_f1": 0.08735342485342484,
+   "heldout_binary_f1": 0.5273645162190054
+  },
+  {
+   "feature": "e_frontend->cartservice_d_log_count",
+   "test_macro_f1": 0.10134751874194821,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.034949604131144535,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_client->frontend_d_log_count",
+   "test_macro_f1": 0.09971766142647483,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03161064725611932,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->checkoutservice_lat_p50_z",
+   "test_macro_f1": 0.09823263366525777,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.021186846898667434,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_checkoutservice_server_p50_us",
+   "test_macro_f1": 0.09823263366525777,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.021186846898667434,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_frontend_n_spans",
+   "test_macro_f1": 0.09811804877133083,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->recommendationservice_log_count",
+   "test_macro_f1": 0.09604365383880606,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_recommendationservice_n_server",
+   "test_macro_f1": 0.09604365383880606,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "w_n_spans",
+   "test_macro_f1": 0.09589477379318663,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->adservice_lat_p50_z",
+   "test_macro_f1": 0.09545620488945643,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.04648116896704467,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_adservice_server_p50_us",
+   "test_macro_f1": 0.09545620488945643,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.04648116896704467,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_checkoutservice_c_redacted",
+   "test_macro_f1": 0.09187037776645411,
+   "test_binary_f1": 0.4717932929679928,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "e_frontend->cartservice_lat_p50_z",
+   "test_macro_f1": 0.0917853296282941,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.01737820068783648,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_client->frontend_lat_p95_z",
+   "test_macro_f1": 0.0901066342833411,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.01768742275071389,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_authservice->frontend_lat_p50_z",
+   "test_macro_f1": 0.08865589346362049,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.02024035420619861,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "w_n_calls",
+   "test_macro_f1": 0.08658215690004854,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->recommendationservice_d_log_count",
+   "test_macro_f1": 0.08636563355870736,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.01974258289703316,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_recommendationservice_n_spans",
+   "test_macro_f1": 0.08634052593124855,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.01231830500123183,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->shippingservice_lat_p95_z",
+   "test_macro_f1": 0.08557959602674695,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.02016028203078563,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_recommendationservice->productcatalogservice_log_count",
+   "test_macro_f1": 0.08462604992310423,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->currencyservice_lat_p50_z",
+   "test_macro_f1": 0.08454831574583027,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.012291052114060964,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->productcatalogservice_d_log_count",
+   "test_macro_f1": 0.08064313649956636,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.028874020470659123,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->cartservice_log_count",
+   "test_macro_f1": 0.08054405783671885,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_recommendationservice->productcatalogservice_lat_p95_z",
+   "test_macro_f1": 0.08002408184677395,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.04640146143243251,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_adservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_adservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_adservice_c_ids_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_adservice_c_paths_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_adservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_authservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_authservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_authservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_cartservice_err_share",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_cartservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_cartservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_cartservice_c_paths_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_cartservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_checkoutservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_checkoutservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_checkoutservice_c_paths_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_checkoutservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_currencyservice_err_share",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_currencyservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_currencyservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_currencyservice_c_paths_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_currencyservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_emailservice_err_share",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_emailservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_emailservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_emailservice_c_paths_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_emailservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_emailservice_c_redacted",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_frontend_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_paymentservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_paymentservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_paymentservice_c_paths_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_paymentservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_productcatalogservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_productcatalogservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_productcatalogservice_c_paths_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_productcatalogservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_recommendationservice_err_share",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_recommendationservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_recommendationservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_recommendationservice_c_paths_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_recommendationservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_shippingservice_err_share",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_shippingservice_c_inject",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_shippingservice_c_url_param",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_shippingservice_c_paths_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "n_shippingservice_c_resp_log",
+   "test_macro_f1": 0.07908915319711293,
+   "test_binary_f1": 0.3559011893870082,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "e_recommendationservice->productcatalogservice_lat_p50_z",
+   "test_macro_f1": 0.07894314582121734,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_cartservice->redis_d_log_count",
+   "test_macro_f1": 0.07883328392666253,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.027062732772003883,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->adservice_d_log_count",
+   "test_macro_f1": 0.07769300548903048,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.02396554376249808,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_recommendationservice->productcatalogservice_d_log_count",
+   "test_macro_f1": 0.07580426764311649,
+   "test_binary_f1": 0.30844793713163066,
+   "heldout_macro_f1": 0.03636351390488506,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_authservice->frontend_lat_p95_z",
+   "test_macro_f1": 0.07031000447075453,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.012944983818770227,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->shippingservice_lat_p50_z",
+   "test_macro_f1": 0.06989647850481692,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.027695382865883727,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->productcatalogservice_lat_p50_z",
+   "test_macro_f1": 0.06928354377516367,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.02359803399064369,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->checkoutservice_lat_p95_z",
+   "test_macro_f1": 0.0684774626108457,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.02011974380395433,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->productcatalogservice_log_count",
+   "test_macro_f1": 0.06844356743955138,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_authservice->frontend_d_log_count",
+   "test_macro_f1": 0.06842572367457951,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.05821769406737814,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_client->authservice_d_log_count",
+   "test_macro_f1": 0.06842572367457951,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.05821769406737814,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_productcatalogservice_n_spans",
+   "test_macro_f1": 0.06755531329789903,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_productcatalogservice_n_server",
+   "test_macro_f1": 0.06755531329789903,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_cartservice_n_spans",
+   "test_macro_f1": 0.06748529619345871,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011519078473722102,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_client->authservice_lat_p95_z",
+   "test_macro_f1": 0.06716571187563718,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.020752717892021374,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->shippingservice_lat_p95_z",
+   "test_macro_f1": 0.06407986205239237,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.054771616175124944,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_cartservice_n_server",
+   "test_macro_f1": 0.06353138637425959,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->recommendationservice_lat_p95_z",
+   "test_macro_f1": 0.06099855219772467,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011063011063011063,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->productcatalogservice_lat_p95_z",
+   "test_macro_f1": 0.06093001101441366,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03386602274348755,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_cartservice->redis_lat_p50_z",
+   "test_macro_f1": 0.05917083354995208,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_cartservice->redis_log_count",
+   "test_macro_f1": 0.057919991990113946,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->paymentservice_log_count",
+   "test_macro_f1": 0.055113322772410954,
+   "test_binary_f1": 0.39761904761904765,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->checkoutservice_log_count",
+   "test_macro_f1": 0.055113322772410954,
+   "test_binary_f1": 0.39761904761904765,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_checkoutservice_n_server",
+   "test_macro_f1": 0.055113322772410954,
+   "test_binary_f1": 0.39761904761904765,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_checkoutservice_c_ids_log",
+   "test_macro_f1": 0.055113322772410954,
+   "test_binary_f1": 0.39761904761904765,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_paymentservice_n_spans",
+   "test_macro_f1": 0.055113322772410954,
+   "test_binary_f1": 0.39761904761904765,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_paymentservice_n_server",
+   "test_macro_f1": 0.055113322772410954,
+   "test_binary_f1": 0.39761904761904765,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_paymentservice_c_ids_log",
+   "test_macro_f1": 0.055113322772410954,
+   "test_binary_f1": 0.39761904761904765,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_shippingservice_c_redacted",
+   "test_macro_f1": 0.05304348714673674,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.012051096649795132,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_shippingservice_n_spans",
+   "test_macro_f1": 0.051550342005292946,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_shippingservice_n_server",
+   "test_macro_f1": 0.051550342005292946,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_cartservice->redis_lat_p95_z",
+   "test_macro_f1": 0.04999483390977368,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03634196345514446,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->currencyservice_lat_p95_z",
+   "test_macro_f1": 0.04832255495328272,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03866923814057165,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->paymentservice_client_err",
+   "test_macro_f1": 0.04780057621894357,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.051372357425979946,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->checkoutservice_server_err",
+   "test_macro_f1": 0.04780057621894357,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.051372357425979946,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_paymentservice_err_share",
+   "test_macro_f1": 0.04780057621894357,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.051372357425979946,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_paymentservice_c_redacted",
+   "test_macro_f1": 0.04780057621894357,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.051372357425979946,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->adservice_lat_p95_z",
+   "test_macro_f1": 0.047709518677260615,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.022059732598597646,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->emailservice_lat_p50_z",
+   "test_macro_f1": 0.04707100231396907,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.036531455793750875,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_emailservice_server_p50_us",
+   "test_macro_f1": 0.04707100231396907,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.036531455793750875,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_shippingservice_c_ids_log",
+   "test_macro_f1": 0.046480879768023724,
+   "test_binary_f1": 0.3546562444483923,
+   "heldout_macro_f1": 0.07769547325102881,
+   "heldout_binary_f1": 0.3496296296296296
+  },
+  {
+   "feature": "e_checkoutservice->cartservice_d_log_count",
+   "test_macro_f1": 0.04562334271163157,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03314256293117255,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->shippingservice_d_log_count",
+   "test_macro_f1": 0.04562334271163157,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03314256293117255,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->cartservice_lat_p95_z",
+   "test_macro_f1": 0.04518159125627869,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.05581347133071272,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->paymentservice_lat_p50_z",
+   "test_macro_f1": 0.0443080124990059,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.024235060087773267,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_paymentservice_server_p50_us",
+   "test_macro_f1": 0.0443080124990059,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.024235060087773267,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->emailservice_lat_p95_z",
+   "test_macro_f1": 0.04353353273438549,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.044901571739807036,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->cartservice_log_count",
+   "test_macro_f1": 0.04294378217493175,
+   "test_binary_f1": 0.36631828393956434,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->shippingservice_log_count",
+   "test_macro_f1": 0.04294378217493175,
+   "test_binary_f1": 0.36631828393956434,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->emailservice_log_count",
+   "test_macro_f1": 0.042152956264152844,
+   "test_binary_f1": 0.34991592064464083,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_emailservice_n_spans",
+   "test_macro_f1": 0.042152956264152844,
+   "test_binary_f1": 0.34991592064464083,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_emailservice_n_server",
+   "test_macro_f1": 0.042152956264152844,
+   "test_binary_f1": 0.34991592064464083,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_emailservice_c_ids_log",
+   "test_macro_f1": 0.042152956264152844,
+   "test_binary_f1": 0.34991592064464083,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->shippingservice_d_log_count",
+   "test_macro_f1": 0.03906249640712917,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03382333482237403,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->cartservice_lat_p50_z",
+   "test_macro_f1": 0.03872734416580971,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.025707196029776676,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->shippingservice_log_count",
+   "test_macro_f1": 0.03771571380442645,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->emailservice_d_log_count",
+   "test_macro_f1": 0.03640316397833746,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.032043837091926215,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->productcatalogservice_log_count",
+   "test_macro_f1": 0.03243075531909666,
+   "test_binary_f1": 0.3141837769422997,
+   "heldout_macro_f1": 0.08611483079568186,
+   "heldout_binary_f1": 0.41067323783078025
+  },
+  {
+   "feature": "n_checkoutservice_n_spans",
+   "test_macro_f1": 0.030365839956462064,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_checkoutservice_err_share",
+   "test_macro_f1": 0.028947732743667593,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.04647374921447028,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->currencyservice_d_log_count",
+   "test_macro_f1": 0.02861214386701643,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.01226391954868776,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->currencyservice_log_count",
+   "test_macro_f1": 0.028606533804334738,
+   "test_binary_f1": 0.3322750720022189,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_recommendationservice_c_ids_log",
+   "test_macro_f1": 0.025721683305890877,
+   "test_binary_f1": 0.3446406987171989,
+   "heldout_macro_f1": 0.07543244325595215,
+   "heldout_binary_f1": 0.5156052963430013
+  },
+  {
+   "feature": "e_checkoutservice->productcatalogservice_d_log_count",
+   "test_macro_f1": 0.023950417785134036,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.026879225143703542,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->paymentservice_d_log_count",
+   "test_macro_f1": 0.01845844918134075,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011747430249632894,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->checkoutservice_d_log_count",
+   "test_macro_f1": 0.01845844918134075,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011747430249632894,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->adservice_client_err",
+   "test_macro_f1": 0.016287510981643313,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03599056988256243,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_adservice_err_share",
+   "test_macro_f1": 0.016287510981643313,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.03599056988256243,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "n_adservice_c_redacted",
+   "test_macro_f1": 0.01416656569328325,
+   "test_binary_f1": 0.32052294463455294,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_frontend->adservice_server_err",
+   "test_macro_f1": 0.012912048877522023,
+   "test_binary_f1": 0.31484960278840274,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_checkoutservice->paymentservice_lat_p95_z",
+   "test_macro_f1": 0.012312312312312314,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011519078473722102,
+   "heldout_binary_f1": 0.3161993769470405
+  },
+  {
+   "feature": "e_authservice->frontend_server_err",
+   "test_macro_f1": 0.011664423508299685,
+   "test_binary_f1": 0.30912659470068693,
+   "heldout_macro_f1": 0.011973180076628351,
+   "heldout_binary_f1": 0.3161993769470405
+  }
+ ],
+ "best_feature_per_attack_test": {
+  "http_flood": {
+   "feature": "n_frontend_c_redacted",
+   "auc": 0.9517
+  },
+  "exfiltration": {
+   "feature": "n_frontend_c_redacted",
+   "auc": 0.9241
+  },
+  "sqli_probe": {
+   "feature": "w_client_err",
+   "auc": 1.0
+  },
+  "brute_force": {
+   "feature": "n_authservice_err_share",
+   "auc": 1.0
+  },
+  "session_rotation_brute": {
+   "feature": "n_authservice_err_share",
+   "auc": 1.0
+  },
+  "slow_brute": {
+   "feature": "n_authservice_c_redacted",
+   "auc": 1.0
+  },
+  "ssrf_probe": {
+   "feature": "w_n_edges",
+   "auc": 1.0
+  },
+  "lateral_movement": {
+   "feature": "w_n_edges",
+   "auc": 1.0
+  }
+ },
+ "content": {
+  "n_content_columns": 96,
+  "drift_normal_windows": [
+   {
+    "feature": "n_checkoutservice_c_ids_log",
+    "ks_test": 0.05367612838745117,
+    "mean_train_normal": -0.4144127666950226,
+    "mean_test_normal": -0.42131897807121277,
+    "ks_heldout": 1.0,
+    "mean_heldout_normal": 0.38271287083625793
+   },
+   {
+    "feature": "n_emailservice_c_ids_log",
+    "ks_test": 0.050235867500305176,
+    "mean_train_normal": -0.44592052698135376,
+    "mean_test_normal": -0.4509165287017822,
+    "ks_heldout": 1.0,
+    "mean_heldout_normal": 0.35278579592704773
+   },
+   {
+    "feature": "n_paymentservice_c_ids_log",
+    "ks_test": 0.05367612838745117,
+    "mean_train_normal": -0.4144127666950226,
+    "mean_test_normal": -0.42131897807121277,
+    "ks_heldout": 1.0,
+    "mean_heldout_normal": 0.38271287083625793
+   },
+   {
+    "feature": "n_shippingservice_c_ids_log",
+    "ks_test": 0.06127864122390747,
+    "mean_train_normal": 0.23124650120735168,
+    "mean_test_normal": 0.2529664635658264,
+    "ks_heldout": 0.9982608556747437,
+    "mean_heldout_normal": 0.7650002837181091
+   },
+   {
+    "feature": "n_authservice_c_ids_log",
+    "ks_test": 0.1119883731007576,
+    "mean_train_normal": -0.3427480161190033,
+    "mean_test_normal": -0.29290512204170227,
+    "ks_heldout": 0.9791304469108582,
+    "mean_heldout_normal": 0.2416769117116928
+   },
+   {
+    "feature": "n_shippingservice_c_redacted",
+    "ks_test": 0.0883558988571167,
+    "mean_train_normal": 0.5995016098022461,
+    "mean_test_normal": 0.5949263572692871,
+    "ks_heldout": 0.9680471420288086,
+    "mean_heldout_normal": 0.6804273724555969
+   },
+   {
+    "feature": "n_cartservice_c_ids_log",
+    "ks_test": 0.12137025594711304,
+    "mean_train_normal": 0.8291537165641785,
+    "mean_test_normal": 0.8828305602073669,
+    "ks_heldout": 0.9599999785423279,
+    "mean_heldout_normal": 1.2672721147537231
+   },
+   {
+    "feature": "n_currencyservice_c_ids_log",
+    "ks_test": 0.12137025594711304,
+    "mean_train_normal": 0.8291537165641785,
+    "mean_test_normal": 0.8828305602073669,
+    "ks_heldout": 0.9599999785423279,
+    "mean_heldout_normal": 1.2672721147537231
+   },
+   {
+    "feature": "n_frontend_c_ids_log",
+    "ks_test": 0.11978316307067871,
+    "mean_train_normal": 0.830239474773407,
+    "mean_test_normal": 0.88385009765625,
+    "ks_heldout": 0.9599999785423279,
+    "mean_heldout_normal": 1.2691525220870972
+   },
+   {
+    "feature": "n_productcatalogservice_c_ids_log",
+    "ks_test": 0.12137025594711304,
+    "mean_train_normal": 0.8291537165641785,
+    "mean_test_normal": 0.8828305602073669,
+    "ks_heldout": 0.9599999785423279,
+    "mean_heldout_normal": 1.2672721147537231
+   },
+   {
+    "feature": "n_recommendationservice_c_ids_log",
+    "ks_test": 0.1259036660194397,
+    "mean_train_normal": 0.6172894835472107,
+    "mean_test_normal": 0.6678828597068787,
+    "ks_heldout": 0.9193515181541443,
+    "mean_heldout_normal": 0.9861559867858887
+   },
+   {
+    "feature": "n_frontend_c_redacted",
+    "ks_test": 0.09327372908592224,
+    "mean_train_normal": 0.4524075388908386,
+    "mean_test_normal": 0.4516247808933258,
+    "ks_heldout": 0.9130582213401794,
+    "mean_heldout_normal": 0.46275758743286133
+   },
+   {
+    "feature": "n_frontend_c_resp_log",
+    "ks_test": 0.18659889698028564,
+    "mean_train_normal": 3.1822452545166016,
+    "mean_test_normal": 3.1777663230895996,
+    "ks_heldout": 0.8882829546928406,
+    "mean_heldout_normal": 3.1574459075927734
+   },
+   {
+    "feature": "n_checkoutservice_c_redacted",
+    "ks_test": 0.10558176040649414,
+    "mean_train_normal": 1.5146698951721191,
+    "mean_test_normal": 1.5166125297546387,
+    "ks_heldout": 0.8865290880203247,
+    "mean_heldout_normal": 1.5354821681976318
+   },
+   {
+    "feature": "n_cartservice_c_redacted",
+    "ks_test": 0.14416006207466125,
+    "mean_train_normal": -1.0809725522994995,
+    "mean_test_normal": -1.0836408138275146,
+    "ks_heldout": 0.8588283061981201,
+    "mean_heldout_normal": -1.063124418258667
+   }
+  ],
+  "random_forest": {
+   "with_content": {
+    "test": {
+     "macro_f1": 0.8564940303233828,
+     "binary_f1": 0.9640586742143451,
+     "normal_called_attack": 0.028277634961439587
+    },
+    "heldout": {
+     "macro_f1": 0.49196604955260764,
+     "binary_f1": 0.8359673081882147,
+     "normal_called_attack": 0.11016949152542373
+    },
+    "top_features": [
+     [
+      "n_authservice_c_redacted",
+      0.0442
+     ],
+     [
+      "w_n_edges",
+      0.0284
+     ],
+     [
+      "n_frontend_c_redacted",
+      0.0247
+     ],
+     [
+      "e_client->authservice_client_err",
+      0.0239
+     ],
+     [
+      "n_authservice_err_share",
+      0.0231
+     ],
+     [
+      "n_cartservice_c_redacted",
+      0.0231
+     ],
+     [
+      "w_client_err",
+      0.023
+     ],
+     [
+      "e_authservice->frontend_log_count",
+      0.0173
+     ],
+     [
+      "n_frontend_c_resp_log",
+      0.0165
+     ],
+     [
+      "n_authservice_c_ids_log",
+      0.0165
+     ]
+    ]
+   },
+   "without_content": {
+    "test": {
+     "macro_f1": 0.8084528080517348,
+     "binary_f1": 0.9168831168831169,
+     "normal_called_attack": 0.08483290488431877
+    },
+    "heldout": {
+     "macro_f1": 0.453193695530526,
+     "binary_f1": 0.7166208562385474,
+     "normal_called_attack": 0.3855932203389831
+    },
+    "top_features": [
+     [
+      "w_client_err",
+      0.0364
+     ],
+     [
+      "e_client->authservice_client_err",
+      0.0328
+     ],
+     [
+      "w_n_edges",
+      0.0315
+     ],
+     [
+      "e_authservice->frontend_log_count",
+      0.0259
+     ],
+     [
+      "n_authservice_err_share",
+      0.0256
+     ],
+     [
+      "n_authservice_n_spans",
+      0.0215
+     ],
+     [
+      "n_authservice_n_server",
+      0.0196
+     ],
+     [
+      "e_client->authservice_log_count",
+      0.0188
+     ],
+     [
+      "w_server_err",
+      0.0176
+     ],
+     [
+      "e_client->frontend_client_err",
+      0.0171
+     ]
+    ]
+   }
+  }
+ }
+}

@@ -231,6 +231,11 @@ numbers can be read without re-running anything:
 - `ci_k3_test.json`, `ci_k3_heldout.json`: 95 % intervals from `ml.ci`
 - `pii_by_service_batch3.json`: personal values per service and field at L0 and
   L1, from `scripts/pii_by_service.py`
+- `batch_report_batch3.json`: dataset totals (traces, spans, windows, labels) and the
+  L1 audit against the ground truth (recall, precision, values left), from
+  `scripts/batch_report.py`
+- `probes/`: one-feature shortcut probes and the content check per level and
+  assignment, from `ml/probes.py`
 
 The per-window predictions behind them (about 12 GB, `results/` on the lab
 machine) are not in the repository.

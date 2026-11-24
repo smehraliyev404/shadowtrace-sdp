@@ -1,0 +1,113 @@
+{
+  "runs_in_queue": 78,
+  "runs_with_features": 78,
+  "missing_features": [],
+  "runs_without_audit": [],
+  "build": {
+    "runs": 78,
+    "traces_kept": 5941988,
+    "spans_kept": 137541188,
+    "partial_traces": 0,
+    "repaired_spans": 0,
+    "windows": 4095,
+    "windows_complete": 3939,
+    "background": 367100,
+    "unmatched": 0
+  },
+  "trace_labels": {
+    "normal": 5238317,
+    "sqli_probe": 219955,
+    "session_rotation_brute": 107121,
+    "http_flood": 106434,
+    "brute_force": 104123,
+    "lateral_movement": 92760,
+    "exfiltration": 58466,
+    "ssrf_probe": 10424,
+    "slow_brute": 4388
+  },
+  "window_labels_k3": {
+    "normal": 2349,
+    "lateral_movement": 222,
+    "brute_force": 226,
+    "session_rotation_brute": 214,
+    "http_flood": 216,
+    "sqli_probe": 222,
+    "ssrf_probe": 215,
+    "slow_brute": 210,
+    "exfiltration": 211,
+    "excluded": 10
+  },
+  "l1_audit": {
+    "exposed_in_l0": {
+      "username": 403260,
+      "session_id": 4997006,
+      "email": 145907,
+      "phone": 145907,
+      "user_id": 145907,
+      "street": 145907,
+      "city": 145907,
+      "state": 86639,
+      "zip": 145907,
+      "country": 145907,
+      "card": 145907,
+      "card_masked": 145907,
+      "payment_token": 145907,
+      "session_token": 145907,
+      "jwt": 145907,
+      "card_exp": 7025
+    },
+    "still_in_l1": {
+      "username": 3,
+      "zip": 43,
+      "card_exp": 7025
+    },
+    "recall": 0.99902,
+    "recall_by_field": {
+      "card": 1.0,
+      "card_exp": 0.0,
+      "card_masked": 1.0,
+      "city": 1.0,
+      "country": 1.0,
+      "email": 1.0,
+      "jwt": 1.0,
+      "payment_token": 1.0,
+      "phone": 1.0,
+      "session_id": 1.0,
+      "session_token": 1.0,
+      "state": 1.0,
+      "street": 1.0,
+      "user_id": 1.0,
+      "username": 0.99999,
+      "zip": 0.99971
+    },
+    "redactions": 256067734,
+    "true_positive": 136105072,
+    "precision_strict": 0.53152,
+    "precision_without_ip_and_trace_context": 0.91258,
+    "no_pii_by_l1_kind": {
+      "hmac_token": 12794259,
+      "ip": 101067246,
+      "trace_context": 5857197,
+      "removed": 243960
+    },
+    "no_pii_top_keys": {
+      "server.address": 83481938,
+      "enduser.id": 12337258,
+      "network.peer.address": 8282670,
+      "http.request.header.traceparent": 5857197,
+      "client.address": 5453949,
+      "net.peer.ip": 3445429,
+      "db.statement": 456943,
+      "http.server_name": 403260,
+      "http.request.header.cookie": 187628,
+      "shipping.state": 56332,
+      "log:exception.stacktrace": 58
+    }
+  },
+  "checks": {
+    "login_typo_traces": 37521,
+    "login_typo_status_200": 129,
+    "lateral_traces": 92760,
+    "lateral_traces_under_2_services": 0
+  }
+}
