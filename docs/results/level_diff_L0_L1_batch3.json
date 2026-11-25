@@ -1,0 +1,84 @@
+{
+ "levels": [
+  "L0",
+  "L1"
+ ],
+ "runs": 78,
+ "windows": 4095,
+ "nodes": 45267,
+ "windows_with_different_window_stats": 0,
+ "windows_with_different_edges": 0,
+ "windows_with_different_node_sets": 0,
+ "node_features": {
+  "n_spans": {
+   "nodes_differing": 0,
+   "share_differing": 0.0,
+   "mean_abs_diff_where_differing": 0.0,
+   "mean_L0": 3038.4427507897585,
+   "mean_L1": 3038.4427507897585
+  },
+  "n_server": {
+   "nodes_differing": 0,
+   "share_differing": 0.0,
+   "mean_abs_diff_where_differing": 0.0,
+   "mean_L0": 1511.7219608103032,
+   "mean_L1": 1511.7219608103032
+  },
+  "err_share": {
+   "nodes_differing": 0,
+   "share_differing": 0.0,
+   "mean_abs_diff_where_differing": 0.0,
+   "mean_L0": 0.02174758316136651,
+   "mean_L1": 0.02174758316136651
+  },
+  "server_p50_us": {
+   "nodes_differing": 0,
+   "share_differing": 0.0,
+   "mean_abs_diff_where_differing": 0.0,
+   "mean_L0": 26586.291382243136,
+   "mean_L1": 26586.291382243136
+  },
+  "c_inject": {
+   "nodes_differing": 0,
+   "share_differing": 0.0,
+   "mean_abs_diff_where_differing": 0.0,
+   "mean_L0": 0.00029674030736015163,
+   "mean_L1": 0.00029674030736015163
+  },
+  "c_url_param": {
+   "nodes_differing": 0,
+   "share_differing": 0.0,
+   "mean_abs_diff_where_differing": 0.0,
+   "mean_L0": 0.0021763934927874523,
+   "mean_L1": 0.0021763934927874523
+  },
+  "c_ids_log": {
+   "nodes_differing": 4027,
+   "share_differing": 0.08896105330594031,
+   "mean_abs_diff_where_differing": 3.639355997850825,
+   "mean_L0": 4.079026924116012,
+   "mean_L1": 3.7552659811918265
+  },
+  "c_paths_log": {
+   "nodes_differing": 0,
+   "share_differing": 0.0,
+   "mean_abs_diff_where_differing": 0.0,
+   "mean_L0": 0.44617107997751443,
+   "mean_L1": 0.44617107997751443
+  },
+  "c_resp_log": {
+   "nodes_differing": 0,
+   "share_differing": 0.0,
+   "mean_abs_diff_where_differing": 0.0,
+   "mean_L0": 0.8469937225224815,
+   "mean_L1": 0.8469937225224815
+  },
+  "c_redacted": {
+   "nodes_differing": 0,
+   "share_differing": 0.0,
+   "mean_abs_diff_where_differing": 0.0,
+   "mean_L0": 0.1832280754577614,
+   "mean_L1": 0.1832280754577614
+  }
+ }
+}
